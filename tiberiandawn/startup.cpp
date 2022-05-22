@@ -205,12 +205,14 @@ int main(int argc, char** argv)
     UtfArgs args(argc, argv);
     CCDebugString("C&C95 - Starting up.\n");
 
+    setvbuf (stdout, NULL, _IONBF, 0);
+
     if (Ram_Free(MEM_NORMAL) < 5000000) {
 #ifdef GERMAN
         printf("Zuwenig Hauptspeicher verf?gbar.\n");
 #else
 #ifdef FRENCH
-        printf("M‚moire vive (RAM) insuffisante.\n");
+        printf("Mâ€šmoire vive (RAM) insuffisante.\n");
 #else
         printf("Insufficient RAM available.\n");
 #endif
@@ -225,7 +227,11 @@ int main(int argc, char** argv)
     /*
     **	Remember the current working directory and drive.
     */
+#ifdef AMIGA
+    Paths.Init("", "CONQUER.INI", "CONQUER.MIX", args.ArgV[0]);
+#else 
     Paths.Init("vanillatd", "CONQUER.INI", "CONQUER.MIX", args.ArgV[0]);
+#endif
     vc_chdir(Paths.Data_Path());
     CDFileClass::Refresh_Search_Drives();
 
@@ -300,7 +306,7 @@ int main(int argc, char** argv)
         }
 #endif
 
-#if defined(_WIN32) && !defined(SDL2_BUILD)
+#if defined(_WIN32) && !defined(SDL_BUILD)
         Create_Main_Window(ProgramInstance, ScreenWidth, ScreenHeight);
 #endif
 
@@ -472,7 +478,7 @@ int main(int argc, char** argv)
         CCDebugString("C&C95 - About to exit.\n");
         ReadyToQuit = 1;
 
-#if defined(SDL2_BUILD)
+#if defined(SDL_BUILD)
         Reset_Video_Mode();
 #elif defined(_WIN32)
         PostMessageA(MainWindow, WM_DESTROY, 0, 0);

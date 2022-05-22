@@ -25,7 +25,7 @@ void Debug_String_File(const char* file);
 
 /* Default to debug logging */
 #ifndef LOGGING_LEVEL
-#define LOGGING_LEVEL 5
+#define LOGGING_LEVEL 0//5
 #endif
 
 #define LOGLEVEL_NONE  0

@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <string.h>
 
-int Linear_Blit_To_Linear(void* thisptr,
+int __attribute__((optimize("Ofast"))) Linear_Blit_To_Linear(void* thisptr,
                           void* dest,
                           int src_x,
                           int src_y,
@@ -43,6 +43,7 @@ int Linear_Blit_To_Linear(void* thisptr,
 
     h = (dst_y + h) > dst_vp.Get_Height() ? dst_vp.Get_Height() - 1 - dst_y : h;
     w = (dst_x + w) > dst_vp.Get_Width() ? dst_vp.Get_Width() - 1 - dst_x : w;
+
 
     // move our pointers to the start locations
     src += src_x + src_y * src_pitch;

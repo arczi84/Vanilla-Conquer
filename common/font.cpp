@@ -37,6 +37,7 @@
 #include "gbuffer.h"
 #include "file.h"
 #include "memflag.h"
+#include "endianness.h"
 
 #include <errno.h>
 #include <string.h>
@@ -89,6 +90,7 @@ unsigned char ColorXlat[16][16] = {
  *=========================================================================*/
 void* Set_Font(void const* fontptr)
 {
+    
     void* oldfont = (void*)FontPtr;
 
     if (fontptr) {
@@ -98,8 +100,8 @@ void* Set_Font(void const* fontptr)
         **	Inform the system about the new font.
         */
 
-        FontWidthBlockPtr = (char*)fontptr + *(unsigned short*)((char*)fontptr + FONTWIDTHBLOCK);
-        char const* blockptr = (char*)fontptr + *(unsigned short*)((char*)fontptr + FONTINFOBLOCK);
+        FontWidthBlockPtr = (char*)fontptr + le16toh(*(unsigned short*)((char*)fontptr + FONTWIDTHBLOCK));
+        char const* blockptr = (char*)fontptr + le16toh(*(unsigned short*)((char*)fontptr + FONTINFOBLOCK));
         FontHeight = *(blockptr + FONTINFOMAXHEIGHT);
         FontWidth = *(blockptr + FONTINFOMAXWIDTH);
     }
@@ -330,11 +332,11 @@ long Buffer_Print(void* thisptr, const char* string, int x, int y, int fground, 
     int base_x = x;
 
     if (FontPtr != nullptr) {
-        const unsigned short* datalist = reinterpret_cast<const unsigned short*>(reinterpret_cast<const char*>(FontPtr)
-                                                                                 + fntheader->OffsetBlockOffset);
-        const unsigned char* widthlist = reinterpret_cast<const unsigned char*>(FontPtr) + fntheader->WidthBlockOffset;
+        const unsigned short* datalist = (reinterpret_cast<const unsigned short*>(reinterpret_cast<const char*>(FontPtr)
+                                                                                 + le16toh(fntheader->OffsetBlockOffset)));
+        const unsigned char* widthlist = reinterpret_cast<const unsigned char*>(FontPtr) + le16toh(fntheader->WidthBlockOffset);
         const unsigned short* linelist =
-            reinterpret_cast<const unsigned short*>(reinterpret_cast<const char*>(FontPtr) + fntheader->HeightOffset);
+            reinterpret_cast<const unsigned short*>(reinterpret_cast<const char*>(FontPtr) + le16toh(fntheader->HeightOffset));
 
         int fntheight = fntheader->MaxHeight;
         int ydisplace = FontYSpacing + fntheight;
@@ -404,8 +406,8 @@ long Buffer_Print(void* thisptr, const char* string, int x, int y, int fground, 
                 // Prepare variables for drawing
                 x += FontXSpacing + char_width;
                 int next_line = pitch - char_width;
-                const unsigned char* char_data = reinterpret_cast<const unsigned char*>(FontPtr) + datalist[char_num];
-                int char_lle = linelist[char_num];
+                const unsigned char* char_data = reinterpret_cast<const unsigned char*>(FontPtr) + le16toh(datalist[char_num]);
+                int char_lle = le16toh(linelist[char_num]);
                 int char_ypos = char_lle & 0xFF;
                 int char_lines = char_lle >> 8;
                 int char_height = fntheight - (char_ypos + char_lines);

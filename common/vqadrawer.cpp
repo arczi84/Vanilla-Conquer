@@ -19,7 +19,7 @@
 #include "vqapalette.h"
 #include <string.h>
 
-int VQA_DrawFrame_Buffer(VQAHandle* handle)
+int __attribute__((optimize("Ofast"))) VQA_DrawFrame_Buffer(VQAHandle* handle)
 {
     VQAConfig* config = &handle->Config;
     VQAData* vqabuf = handle->VQABuf;
@@ -102,7 +102,7 @@ int VQA_GetPaletteSize(VQAHandle* handle)
 }
 
 // wip replacement for identical chunks in SetDrawBuffer and ConfigureDrawer
-void VQA_SetDrawRect(VQAHandle* handle, unsigned width, unsigned height, int xpos, int ypos)
+void __attribute__((optimize("Ofast"))) VQA_SetDrawRect(VQAHandle* handle, unsigned width, unsigned height, int xpos, int ypos)
 {
     VQAHeader* header = &handle->Header;
     VQAData* vqabuf = handle->VQABuf;
@@ -143,7 +143,7 @@ void VQA_SetDrawRect(VQAHandle* handle, unsigned width, unsigned height, int xpo
     }
 }
 
-void VQA_SetDrawBuffer(VQAHandle* handle, uint8_t* buffer, unsigned width, unsigned height, int xpos, int ypos)
+void __attribute__((optimize("Ofast"))) VQA_SetDrawBuffer(VQAHandle* handle, uint8_t* buffer, unsigned width, unsigned height, int xpos, int ypos)
 {
     VQADrawer* drawer = &handle->VQABuf->Drawer;
     unsigned flags = handle->Config.DrawFlags & 0x30;
@@ -184,7 +184,7 @@ void VQA_SetDrawBuffer(VQAHandle* handle, uint8_t* buffer, unsigned width, unsig
     drawer->ScreenOffset = drawer->X1 + drawer->Y1 * width;
 }
 
-void VQA_ConfigureDrawer(VQAHandle* handle)
+void __attribute__((optimize("Ofast"))) VQA_ConfigureDrawer(VQAHandle* handle)
 {
     VQAData* data = handle->VQABuf;
     unsigned flags = handle->Config.DrawFlags & 0x30;
@@ -243,7 +243,7 @@ void VQA_ConfigureDrawer(VQAHandle* handle)
     data->Drawer.ScreenOffset = data->Drawer.X1 + data->Drawer.Y1 * data->Drawer.ImageWidth;
 }
 
-int VQA_SelectFrame(VQAHandle* handle)
+int __attribute__((optimize("Ofast"))) VQA_SelectFrame(VQAHandle* handle)
 {
     int result;
     VQAConfig* config = &handle->Config;

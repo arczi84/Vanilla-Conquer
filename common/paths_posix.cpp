@@ -14,7 +14,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#ifndef AMIGA
 #include <dlfcn.h>
+#endif
 #include <pwd.h>
 #include <stdexcept>
 #include <sys/stat.h>
@@ -49,8 +51,11 @@ namespace
 
         if (_path.empty()) {
             int uid = getuid();
+            #if !defined(__AMIGA__)
             const char* home_env = std::getenv("HOME");
-
+            #else
+            const char* home_env = "";
+            #endif
             if (home_env) {
                 _path = home_env;
             } else if (uid == 0) {
@@ -66,8 +71,11 @@ namespace
 
                 std::vector<char> buffer;
                 buffer.resize(bufsize);
+#if !defined (AMIGA)                
                 int error_code = getpwuid_r(uid, &pwd, buffer.data(), buffer.size(), &pw);
-
+#else
+                int error_code = 1;
+#endif
                 if (error_code) {
                     DBG_ERROR("Unable to get passwd entry for uid %d, error was %d.", uid, error_code);
                     return _path;
@@ -83,7 +91,6 @@ namespace
                 _path = tmp;
             }
         }
-
         return _path;
     }
 
@@ -106,8 +113,7 @@ namespace
                 return tmp;
             }
         }
-
-        return User_Home() + "/" + relative_path;
+        return User_Home() +  "/" + relative_path;
     }
 } // namespace
 
@@ -182,9 +188,11 @@ const char* PathsClass::Data_Path()
             // Init the program path first if it hasn't been done already.
             Program_Path();
         }
-
+#ifdef AMIGA
+        DataPath = "";
+#else
         DataPath = ProgramPath.substr(0, ProgramPath.find_last_of("/")) + SEP + "share";
-
+#endif
         if (!Suffix.empty()) {
             DataPath += SEP + Suffix;
         }
@@ -196,17 +204,26 @@ const char* PathsClass::Data_Path()
 const char* PathsClass::User_Path()
 {
     if (UserPath.empty()) {
+
 #ifdef TARGET_OS_MAC
         UserPath = User_Home() + "/Library/Application Support/Vanilla-Conquer";
 #else
+
+#ifdef AMIGA
+        UserPath = "";
+
+        return UserPath.c_str();
+#else
         UserPath = Get_Posix_Default("XDG_CONFIG_HOME", ".config") + "/vanilla-conquer";
 #endif
-
         if (!Suffix.empty()) {
             UserPath += SEP + Suffix;
         }
 
         Create_Directory(UserPath.c_str());
+#endif
+
+
     }
 
     return UserPath.c_str();
@@ -260,3 +277,12 @@ std::string PathsClass::Argv_Path(const char* cmd_arg)
     }
     return ret;
 }
+#if (AMIGA)   
+extern "C" {
+    char *realpath(const char *_path, char *resolved_path)
+	{
+		return "";
+	}
+}
+#endif
+

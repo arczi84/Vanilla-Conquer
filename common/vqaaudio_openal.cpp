@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <chrono>
 
+
 int AudioFlags;
 int TimerIntCount;
 int TimerMethod;
@@ -82,7 +83,7 @@ static const char* Get_OpenAL_Error(ALenum error)
     return "Unknown OpenAL error.";
 }
 
-bool Queue_Audio(ALuint buffer)
+bool __attribute__((optimize("Ofast"))) Queue_Audio(ALuint buffer)
 {
     VQAConfig* config = &AudioVQAHandle->Config;
     VQAData* data = AudioVQAHandle->VQABuf;
@@ -135,7 +136,7 @@ bool Queue_Audio(ALuint buffer)
     return true;
 }
 
-void VQA_AudioCallback()
+void __attribute__((optimize("Ofast"))) VQA_AudioCallback()
 {
     if (!VQAAudioPaused && AudioVQAHandle) {
         VQAConfig* config = &AudioVQAHandle->Config;
@@ -179,7 +180,7 @@ void VQA_StopTimerInt(VQAHandle* handle)
     AudioFlags &= ~VQA_AUDIO_FLAG_INTERRUPT_TIMER;
 }
 
-int VQA_OpenAudio(VQAHandle* handle, void* hwnd)
+int __attribute__((optimize("Ofast"))) VQA_OpenAudio(VQAHandle* handle, void* hwnd)
 {
     VQAConfig* config = &handle->Config;
     VQAData* data = handle->VQABuf;
@@ -196,12 +197,13 @@ int VQA_OpenAudio(VQAHandle* handle, void* hwnd)
     if (config->AudioRate == -1) {
         int rate = 0;
 
+        rate = audio->SampleRate;/*
         if (header->FPS == config->FrameRate) {
             rate = audio->SampleRate;
         } else {
             rate = config->FrameRate * audio->SampleRate / header->FPS;
         }
-
+*/
         config->AudioRate = rate;
     }
 
@@ -238,7 +240,7 @@ void VQA_CloseAudio(VQAHandle* handle)
     AudioFlags &= ~(VQA_AUDIO_FLAG_UNKNOWN001 | VQA_AUDIO_FLAG_UNKNOWN002 | VQA_AUDIO_FLAG_AUDIO_DMA_TIMER);
 }
 
-int VQA_StartAudio(VQAHandle* handle)
+int __attribute__((optimize("Ofast"))) VQA_StartAudio(VQAHandle* handle)
 {
     VQAConfig* config = &handle->Config;
     VQAData* data = handle->VQABuf;
@@ -354,7 +356,7 @@ void VQA_ResumeAudio()
     }
 }
 
-int VQA_CopyAudio(VQAHandle* handle)
+int __attribute__((optimize("Ofast"))) VQA_CopyAudio(VQAHandle* handle)
 {
     VQAConfig* config = &handle->Config;
     VQAData* data = handle->VQABuf;
@@ -373,7 +375,9 @@ int VQA_CopyAudio(VQAHandle* handle)
                 }
 
                 if (audio->IsLoaded[next_block] == 1) {
-                    return -10;
+                    
+                    audio->IsLoaded[next_block] = 0;    //
+                    return -1;                          //-10
                 }
 
                 // Need to loop back and treat like circular buffer?
@@ -437,7 +441,7 @@ unsigned VQA_GetTime(VQAHandle* handle)
 {
     auto now = std::chrono::steady_clock::now().time_since_epoch();
     unsigned result_time =
-        unsigned(TickOffset + 60 * (std::chrono::duration_cast<std::chrono::milliseconds>(now).count()) / 1000);
+        unsigned(TickOffset + 60 * 5 * (std::chrono::duration_cast<std::chrono::milliseconds>(now).count()) / 1000);
 
     return result_time;
 }

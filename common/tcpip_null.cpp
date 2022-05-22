@@ -173,7 +173,7 @@ void TcpipManagerClass::Start_Server(void)
  * HISTORY:                                                                                    *
  *    3/20/96 2:58PM ST : Created                                                              *
  *=============================================================================================*/
-
+#ifndef AMIGA
 int TcpipManagerClass::Read(void* buffer, int buffer_len)
 {
     return 0;
@@ -198,7 +198,7 @@ int TcpipManagerClass::Read(void* buffer, int buffer_len)
 void TcpipManagerClass::Write(void* buffer, int buffer_len)
 {
 }
-
+#endif
 /***********************************************************************************************
  * TMC::Add_Client -- a client has requested to connect. Make the connection                   *
  *                                                                                             *

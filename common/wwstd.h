@@ -101,7 +101,11 @@ template <class T> T MAX(T a, T b)
 #define HIGH_WORD(a) ((unsigned long)(a) >> 16)
 
 // Merges to shorts to become a long
+#ifdef __BIG_ENDIAN__
+    #define MAKE_LONG(a, b) ((long)((b)&0x0000FFFFL)) | ((long)(a) << 16)
+#else
 #define MAKE_LONG(a, b) (((long)(a) << 16) | (long)((b)&0x0000FFFFL))
+#endif
 
 /*
 ** Macro allows our routines to act like
@@ -258,12 +262,16 @@ inline static void _splitpath(const char* path, char* drive, char* dir, char* fn
     }
 }
 
+#ifndef AMIGA
 inline static char* strupr(char* str)
 {
     for (int i = 0; i < strlen(str); i++)
         str[i] = toupper(str[i]);
     return str;
 }
+#endif
+#else
+extern char* strupr(char* str);
 
 inline static void strrev(char* str)
 {

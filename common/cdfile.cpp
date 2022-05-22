@@ -122,9 +122,13 @@ int CDFileClass::Open(int rights)
     ** Otherwise it will try and write it to the working directory, probably the binary dir.
     */
     if ((rights & WRITE) && !PathsClass::Is_Absolute(File_Name())) {
+#ifndef AMIGA        
         path = Paths.User_Path();
         path += PathsClass::SEP;
         path += File_Name();
+#else
+        path = File_Name(); // No '/' before paths on Amiga
+#endif        
         BufferIOFileClass::Set_Name(path.c_str());
     }
 
@@ -392,7 +396,9 @@ char const* CDFileClass::Set_Name(char const* filename)
         **	Build a pathname to search for.
         */
         std::string path = srch->Path;
+#ifndef AMIGA
         path += PathsClass::SEP;
+#endif
         path += filename;
 
         /*
@@ -433,7 +439,7 @@ int CDFileClass::Is_Available(int forced)
     **	fall into the normal raw file filename setting system.
     */
     SearchDriveType* srch = First;
-
+#ifndef AMIGA
     while (srch) {
         /*
         **	Build a pathname to search for.
@@ -456,7 +462,7 @@ int CDFileClass::Is_Available(int forced)
         */
         srch = (SearchDriveType*)srch->Next;
     }
-
+#endif
     /*
     **	At this point, all path searching has failed. Just set the file name to the
     **	original and return its availability.
@@ -509,8 +515,7 @@ int CDFileClass::Open(char const* filename, int rights)
     }
 
     if ((rights | WRITE)) {
-        std::string write_path = Paths.User_Path();
-        write_path += PathsClass::SEP;
+        std::string write_path = Paths.User_Path() + PathsClass::SEP;
         write_path += filename;
         BufferIOFileClass::Set_Name(filename);
         return (BufferIOFileClass::Open(rights));

@@ -592,7 +592,7 @@ template <class T> bool IndexClass<T>::Remove_Index(int id)
  * HISTORY:                                                                                    *
  *   11/02/1996 JLB : Created.                                                                 *
  *=============================================================================================*/
-template <class T> int IndexClass<T>::search_compfunc(void const* ptr1, void const* ptr2)
+template <class T> int __attribute__((optimize("Ofast"))) IndexClass<T>::search_compfunc(void const* ptr1, void const* ptr2)
 {
     if (*(int const*)ptr1 == *(int const*)ptr2) {
         return (0);

@@ -106,6 +106,10 @@ public:
         ACTION_COUNT,
         ACTION_FIRST = 0
     } ActionType;
+	
+#ifdef AMIGA
+#undef VOLATILE
+#endif
 
     typedef enum PersistantType
     {

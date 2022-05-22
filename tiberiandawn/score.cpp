@@ -296,8 +296,9 @@ void ScorePrintClass::Update(void)
     StillUpdating = true;
 
     if (!Timer.Time()) {
+#ifndef AMIGA
         Timer.Set(1);
-
+#endif
         int pos = XPos + (Stage * 6);
         if (Stage) {
 
@@ -378,7 +379,9 @@ void MultiStagePrintClass::Update(void)
     StillUpdating = true;
 
     if (!Timer.Time()) {
+#ifndef AMIGA
         Timer.Set(1);
+#endif
 
         /*
         ** Do 10 stages at once
@@ -449,7 +452,9 @@ void ScoreScaleClass::Update(void)
     ** Restore the background for the scaled-up letter
     */
     if (!Timer.Time()) {
+#ifndef AMIGA
         Timer.Set(1);
+#endif
         if (Stage != 5) {
             TextPrintBuffer->Blit(HidPage,
                                   _destx[Stage + 1] * factor,
@@ -1916,8 +1921,16 @@ void Draw_Bar_Graphs(int i, int gkilled, int nkilled, int ckilled)
  * HISTORY:                                                                *
  *   04/13/1995 BWG : Created.                                             *
  *=========================================================================*/
+
+extern bool enable_delay;
+
 void Call_Back_Delay(int time)
 {
+#ifdef AMIGA
+    if (!enable_delay)
+        time = 0;
+#endif
+
     CountDownTimerClass cd;
 
     if (!ControlQ) {

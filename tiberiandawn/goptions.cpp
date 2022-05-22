@@ -60,7 +60,7 @@ void GameOptionsClass::Adjust_Variables_For_Resolution(void)
     Border1Len = 72 * factor;
     Border2Len = 16 * factor;
     ButtonResumeY = (OptionHeight - (15 * factor));
-    TitlePicture = (char*)(factor == 1 ? "TITLE.CPS" : "HTITLE.PCX");
+    TitlePicture = (char*)(factor == 1 ? "TITLE.CPS" : "screen0.PCX");
 }
 /***********************************************************************************************
  * OptionsClass::Process -- Handles all the options graphic interface.                         *
@@ -259,7 +259,7 @@ void GameOptionsClass::Process(void)
                              GREEN,
                              TBLACK,
                              TPF_6POINT | TPF_NOSHADOW | TPF_RIGHT,
-                             ScenarioName,
+                             ""/*ScenarioName*/,// arczi
                              VersionText);
 
             buttons->Draw_All();
@@ -376,7 +376,11 @@ void GameOptionsClass::Process(void)
 #endif
                     BreakoutAllowed = true;
                     char buffer[25];
+#ifdef AMIGA
+                    sprintf(buffer, "movies/%s.mpg", BriefMovie);
+#else
                     sprintf(buffer, "%s.VQA", BriefMovie);
+#endif
                     if (CCFileClass(buffer).Is_Available()) {
                         Play_Movie(BriefMovie);
                     } else {
@@ -395,6 +399,7 @@ void GameOptionsClass::Process(void)
 
             case (BUTTON_LOAD):
                 display = true;
+                drawbox = true;
                 if (LoadOptionsClass(LoadOptionsClass::LOAD).Process()) {
                     process = false;
                 }
@@ -459,7 +464,8 @@ void GameOptionsClass::Process(void)
                 display = true;
                 break;
             }
-
+            back = NULL;
+            drawbox = true;
             pressed = false;
             buttonsel[curbutton - 1]->IsPressed = false;
             // buttonsel[curbutton-1]->Turn_Off();

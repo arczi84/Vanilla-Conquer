@@ -434,26 +434,26 @@ void BuildingClass::Debug_Dump(MonoClass* mono) const
 {
     Validate();
     mono->Set_Cursor(0, 0);
-    mono->Print("ÚName:ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂMission:ÄÄÄÂTarCom:ÂÄÄÄÄÄÄÄÂRadio:ÂCoord:ÄÄÂÄÄÄÄÄÄÄÄÂSt:Ä¿\n"
-                "³                   ³           ³       ³       ³      ³        ³        ³    ³\n"
-                "ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂNÂYÂHealth:ÄÂÄÄÄÁÄÂTurret:ÂÄÄÄÄÄÁÂÄBuilding:ÄÄÂCargo:ÄÄÄÄÁÄÄÄÄ´\n"
-                "³Active........³ ³ ³        ³     ³       ³      ³            ³               ³\n"
-                "³Limbo.........³ ³ ÃÄÄÄÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´\n"
-                "³Owned.........³ ³ ³Last Message:                                             ³\n"
-                "³Discovered....³ ³ ÃTimer:ÂArm:ÂÄÄÄÄÄÄÂTiberium:ÂFlash:ÂStage:ÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ\n"
-                "³Selected......³ ³ ³      ³    ³      ³         ³      ³      ³                \n"
-                "³Teathered.....³ ³ ÃÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÙ                \n"
-                "³Locked on Map.³ ³ ³                                                           \n"
-                "³Is A Loaner...³ ³ ³                                                           \n"
-                "³              ³ ³ ³                                                           \n"
-                "³              ³ ³ ³                                                           \n"
-                "³              ³ ³ ³                                                           \n"
-                "³Repairing.....³ ³ ³                                                           \n"
-                "³              ³ ³ ³                                                           \n"
-                "³              ³ ³ ³                                                           \n"
-                "³Recoiling.....³ ³ ³                                                           \n"
-                "³To Display....³ ³ ³                                                           \n"
-                "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÁÄÙ                                                           \n");
+    mono->Print("ÃšName:Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã‚Mission:Ã„Ã„Ã„Ã‚TarCom:Ã‚Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã‚Radio:Ã‚Coord:Ã„Ã„Ã‚Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã‚St:Ã„Â¿\n"
+                "Â³                   Â³           Â³       Â³       Â³      Â³        Â³        Â³    Â³\n"
+                "ÃƒÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã‚NÃ‚YÃ‚Health:Ã„Ã‚Ã„Ã„Ã„ÃÃ„Ã‚Turret:Ã‚Ã„Ã„Ã„Ã„Ã„ÃÃ‚Ã„Building:Ã„Ã„Ã‚Cargo:Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Â´\n"
+                "Â³Active........Â³ Â³ Â³        Â³     Â³       Â³      Â³            Â³               Â³\n"
+                "Â³Limbo.........Â³ Â³ ÃƒÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Â´\n"
+                "Â³Owned.........Â³ Â³ Â³Last Message:                                             Â³\n"
+                "Â³Discovered....Â³ Â³ ÃƒTimer:Ã‚Arm:Ã‚Ã„Ã„Ã„Ã„Ã„Ã„Ã‚Tiberium:Ã‚Flash:Ã‚Stage:Ã‚Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã™\n"
+                "Â³Selected......Â³ Â³ Â³      Â³    Â³      Â³         Â³      Â³      Â³                \n"
+                "Â³Teathered.....Â³ Â³ ÃƒÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã™                \n"
+                "Â³Locked on Map.Â³ Â³ Â³                                                           \n"
+                "Â³Is A Loaner...Â³ Â³ Â³                                                           \n"
+                "Â³              Â³ Â³ Â³                                                           \n"
+                "Â³              Â³ Â³ Â³                                                           \n"
+                "Â³              Â³ Â³ Â³                                                           \n"
+                "Â³Repairing.....Â³ Â³ Â³                                                           \n"
+                "Â³              Â³ Â³ Â³                                                           \n"
+                "Â³              Â³ Â³ Â³                                                           \n"
+                "Â³Recoiling.....Â³ Â³ Â³                                                           \n"
+                "Â³To Display....Â³ Â³ Â³                                                           \n"
+                "Ã€Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„ÃÃ„Ã™                                                           \n");
     mono->Set_Cursor(1, 1);
     mono->Printf("%s:%s", House->Class->IniName, Class->IniName);
     mono->Set_Cursor(35, 3);
@@ -4604,7 +4604,7 @@ int BuildingClass::Mission_Repair(void)
 
                     // MBL 07.06.2020 - Patch 3: Change to TD Legacy: Adding "Repairing" VO for units on repair bay
                     // Per https://jaas.ea.com/browse/TDRA-7271
-                    if (IsOwnedByPlayer && House)
+                    if (IsOwnedByPlayer && House)				
                         Speak(VOX_REPAIRING, House);
 
                     Status = DURING;

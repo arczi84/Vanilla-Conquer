@@ -269,11 +269,16 @@ bool Queue_Mission(TARGET whom, MissionType mission, TARGET target, TARGET desti
  * HISTORY:                                                                *
  *   09/21/1995 JLB : Created.                                             *
  *=========================================================================*/
+extern bool enable_triple;
+
 bool Queue_Options(void)
 {
     if (!OutList.Add(EventClass(EventClass::OPTIONS))) {
+        enable_triple = true;
         return (false);
     } else {
+        TitlePicture = strdup("screen1.pcx");
+        enable_triple = false;
         return (true);
     }
 

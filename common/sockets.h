@@ -31,10 +31,17 @@ static inline int socket_cleanup(void)
 }
 
 #else /* Assume posix style sockets on non-windows */
-
+#ifndef AMIGA
 #include <arpa/inet.h>
+#endif
 #include <errno.h>
+#undef Node
+#undef List
+#define Node NodeA
+#define List ListA
 #include <netdb.h> // for getaddrinfo() and freeaddrinfo()
+#undef Node
+#undef List
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>

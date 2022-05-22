@@ -565,6 +565,9 @@ void OptionsClass::Load_Settings(void)
     */
     static char const* const OPTIONS = "Options";
     GameSpeed = ini.Get_Int(OPTIONS, "GameSpeed", 4);
+    #ifdef AMIGA
+        GameSpeed = 0;
+    #endif
     ScrollRate = ini.Get_Int(OPTIONS, "ScrollRate", 4);
     Set_Brightness(ini.Get_Int(OPTIONS, "Brightness", 0x80));
     Set_Sound_Volume(ini.Get_Int(OPTIONS, "Volume", 0xA0), false);

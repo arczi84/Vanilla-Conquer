@@ -500,7 +500,7 @@ void Close_File(int handle)
     }
 }
 
-long Read_File(int handle, void* buf, unsigned long bytes)
+long __attribute__((optimize("Ofast"))) Read_File(int handle, void* buf, unsigned long bytes)
 {
     if (handle != WWERROR && Handles[handle].Is_Open()) {
         return (Handles[handle].Read(buf, bytes));

@@ -33,6 +33,7 @@
 
 #include "function.h"
 #include "common/vqaconfig.h"
+#include "KI_header.h"
 
 #ifdef JAPANESE
 bool ForceEnglish = false;
@@ -610,17 +611,17 @@ int DesiredFrameRate;
 ** names of the Global Channel packet types, and the event types.
 */
 const char* GlobalPacketNames[] = {"Game?",
-                                   "Game!",
-                                   "Player?",
-                                   "Player!",
-                                   "Join?",
-                                   "Join!",
-                                   "Reject",
-                                   "GameOptions",
-                                   "Sign Off",
-                                   "GO!",
-                                   "Message",
-                                   "Ping"};
+                             "Game!",
+                             "Player?",
+                             "Player!",
+                             "Join?",
+                             "Join!",
+                             "Reject",
+                             "GameOptions",
+                             "Sign Off",
+                             "GO!",
+                             "Message",
+                             "Ping"};
 
 // yeah, there's 100 empty names here, because the SerialCommandType starts at 100.
 const char* SerialPacketNames[] = {
@@ -959,3 +960,10 @@ bool RunningAsDLL = false;
 
 /* Holds the title filename. On 320x200, set to TITLE.CPS, else HTITLE.PCX. */
 char* TitlePicture = NULL;
+
+uint16_t* KI_buffer16_VOC[VOC_COUNT]; // used to hold the uncompressed audio data
+uint16_t* KI_buffer16_VOX[VOX_COUNT]; // used to hold the uncompressed audio data
+uint16_t* KI_buffer16_MUSIC[THEME_COUNT]; // used to hold the uncompressed audio data
+unsigned char* raw_music_data;
+AUDIO_SAMPLE sound_samples_VOC[VOC_COUNT];
+AUDIO_SAMPLE sound_samples_VOX[VOX_COUNT];

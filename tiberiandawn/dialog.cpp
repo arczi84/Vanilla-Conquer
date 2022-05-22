@@ -90,9 +90,19 @@ void Dialog_Box(int x, int y, int w, int h)
  *   07/31/1992 JLB : Depressed option added.                                                  *
  *=============================================================================================*/
 extern void CC_Texture_Fill(void const* shapefile, int shapenum, int xpos, int ypos, int width, int height);
+extern bool drawbox;
 
 void Draw_Box(int x, int y, int w, int h, BoxStyleEnum up, bool filled)
 {
+    
+    if (/*(x == 30) ||*/ /*(x == 146) || */ (x == 70) || (x == 470)) //wył tło start 
+    {
+        //printf("x=%i ",x);
+        //printf("y=%i ",y);
+        return;
+    }
+
+
     static BoxStyleType const ButtonColors[BOXSTYLE_COUNT] = {
 
         // Filler, Shadow, Hilite, Corner colors
@@ -119,24 +129,19 @@ void Draw_Box(int x, int y, int w, int h, BoxStyleEnum up, bool filled)
     h--;
     BoxStyleType const& style = ButtonColors[up];
 
-    if (filled) {
-        /*
-        if (style.Filler == CC_GREEN_BKGD) {
-            CC_Texture_Fill(MFCD::Retrieve("BTEXTURE.SHP"), InMainLoop, x, y, w, h);
-        } else {
-            LogicPage->Fill_Rect(x, y, x + w, y + h, style.Filler);
-        }
-        */
-        LogicPage->Fill_Rect(x, y, x + w, y + h, style.Filler);
-    }
-
+	if (!drawbox && (up !=BOXSTYLE_GREEN_BOX)) 
+    return;
+    
+    if (filled)
+            LogicPage->Fill_Rect(x, y, x + w, y + h, style.Filler); //<<-- wył tło
+ 
     switch (up) {
     case (BOXSTYLE_GREEN_BOX):
-        LogicPage->Draw_Rect(x, y, x + w, y + h, style.Highlight);
+        LogicPage->Draw_Rect(x, y, x + w, y + h, style.Highlight); //<<
         break;
 
     case (BOXSTYLE_GREEN_BORDER):
-        LogicPage->Draw_Rect(x + 1, y + 1, x + w - 1, y + h - 1, style.Highlight);
+        LogicPage->Draw_Rect(x + 1, y + 1, x + w - 1, y + h - 1, style.Highlight); //<<
         break;
 
     default:

@@ -773,10 +773,14 @@ unsigned int ConnectionClass::Time(void)
     /*------------------------------------------------------------------------
     If the Westwood library isn't being used, use the DOS timer.
     ------------------------------------------------------------------------*/
+#ifdef AMIGA
+	printf("Warning! ftime disabled\n");	
+    return 0;
+#else
     ftime(&mytime);
     msec = (unsigned int)mytime.time * 1000 + (unsigned int)mytime.millitm;
     return ((msec / 100) * 6);
-
+#endif
 #endif
 
 } /* end of Time */

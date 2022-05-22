@@ -41,6 +41,7 @@
 
 #include "wwkeyboard.h"
 #include "dipthong.h"
+#include "endianness.h"
 
 /***************************************************************************
  * Fixup_Text -- Converts dipthonged foreign text into normal text.        *
@@ -313,8 +314,9 @@ char* Extract_String(void const* data, int string)
         return (InternetTxt[string - 4567]);
 
     unsigned short int const* ptr = (unsigned short int const*)data;
-    if (string >= (ptr[0] / 2)) {
+    if (string >= (le16toh(ptr[0]) / 2)) {
         return nullptr;
     }
-    return (((char*)data) + ptr[string]);
+
+    return (((char*)data) + le16toh(ptr[string]));
 }

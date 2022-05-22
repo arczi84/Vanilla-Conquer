@@ -31,10 +31,6 @@
  *---------------------------------------------------------------------------------------------*
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#ifdef __BIG_ENDIAN__
-#include "defines_BE.h"
-#endif
-
 #ifndef DEFINES_H
 #define DEFINES_H
 
@@ -355,7 +351,7 @@ typedef enum MoveType : unsigned char
 **	same order as specified in the CONQUER.TXT file as well as the filename
 **	list located in the ThemeClass.
 */
-typedef enum ThemeType : signed char
+typedef enum ThemeType : signed int
 {
     THEME_PICK_ANOTHER = -2,
     THEME_NONE = -1,
@@ -532,7 +528,7 @@ typedef enum MissionType : signed char
 **	be processing. These serve to control the way that a building
 **	appears.
 */
-typedef enum BStateType : signed char
+typedef enum BStateType : signed int
 {
     BSTATE_NONE = -1,
     BSTATE_CONSTRUCTION, // Construction animation.
@@ -599,7 +595,7 @@ typedef enum ResultType : unsigned char
 */
 // DEBUG === convert this to be zero based so that a nulled cell is the
 //			 	 default cell.
-enum ConcreteEnum : signed char
+enum ConcreteEnum : signed int
 {
     C_NONE = -1,
     C_LEFT = 0,
@@ -665,7 +661,7 @@ typedef enum VolType : unsigned char
 **	The houses that can be played are listed here. Each has their own
 **	personality and strengths.
 */
-typedef enum HousesType : signed char
+typedef enum HousesType : signed int
 {
     HOUSE_NONE = -1,
     HOUSE_GOOD,    // Global Defense Initiative
@@ -696,7 +692,7 @@ typedef enum HousesType : signed char
 #define HOUSEF_MULTI5  (1 << HOUSE_MULTI5)
 #define HOUSEF_MULTI6  (1 << HOUSE_MULTI6)
 
-typedef enum PlayerColorType : signed char
+typedef enum PlayerColorType : signed int
 {
     REMAP_NONE = -1,
     REMAP_GOLD,
@@ -716,7 +712,7 @@ typedef enum PlayerColorType : signed char
 ** usual human-vs-computer games; 2-Player games are network or modem,
 ** with 2 players; multi-player games are network with > 2 players.
 */
-typedef enum ScenarioPlayerEnum : signed char
+typedef enum ScenarioPlayerEnum : signed int
 {
     SCEN_PLAYER_NONE = -1,
     SCEN_PLAYER_GDI,
@@ -733,7 +729,7 @@ typedef enum ScenarioPlayerEnum : signed char
 /**********************************************************************
 ** These are the directional parameters for a scenario.
 */
-typedef enum ScenarioDirEnum : signed char
+typedef enum ScenarioDirEnum : signed int
 {
     SCEN_DIR_NONE = -1,
     SCEN_DIR_EAST,
@@ -747,7 +743,7 @@ typedef enum ScenarioDirEnum : signed char
 /**********************************************************************
 ** These are the random variations of a scenario.
 */
-typedef enum ScenarioVarEnum : signed char
+typedef enum ScenarioVarEnum : signed int
 {
     SCEN_VAR_NONE = -1,
     SCEN_VAR_A,
@@ -766,7 +762,7 @@ typedef enum ScenarioVarEnum : signed char
 **	enumerated values specify those layers. The ground layer is sorted
 **	from back to front.
 */
-typedef enum LayerType : signed char
+typedef enum LayerType : signed int
 {
     LAYER_NONE = -1,
     LAYER_GROUND, // Touching the ground type object (units & buildings).
@@ -783,7 +779,7 @@ typedef enum LayerType : signed char
 **	This enumerates the various bullet types. These types specify bullet's
 **	visual and explosive characteristics.
 */
-typedef enum BulletType : signed char
+typedef enum BulletType : signed int
 {
     BULLET_NONE = -1,
     BULLET_SNIPER,      // Sniper bullet.
@@ -820,7 +816,7 @@ typedef enum BulletType : signed char
 **	All game buildings (structures) are enumerated here. This includes
 **	civilian structures as well.
 */
-typedef enum StructType : signed char
+typedef enum StructType : signed int
 {
     STRUCT_NONE = -1,
     STRUCT_WEAP,
@@ -937,7 +933,7 @@ typedef enum StructType : signed char
 **	a transparent icon. It is placed over the terrain but usually falls
 **	"under" buildings, trees, and units.
 */
-typedef enum OverlayType : signed char
+typedef enum OverlayType : signed int
 {
     OVERLAY_NONE = -1,
     OVERLAY_CONCRETE,      // Concrete.
@@ -981,7 +977,7 @@ typedef enum OverlayType : signed char
 **	This specifies the infantry in the game. The "E" designation is
 **	similar to the army classification of enlisted soldiers.
 */
-typedef enum InfantryType : signed char
+typedef enum InfantryType : signed int//char
 {
     INFANTRY_NONE = -1,
     INFANTRY_E1,    // Mini-gun armed.
@@ -1016,7 +1012,7 @@ typedef enum InfantryType : signed char
 **	The game units are enumerated here. These include not only traditional
 **	vehicles, but also hovercraft and gunboats.
 */
-typedef enum UnitType : signed char
+typedef enum UnitType : signed int
 {
     UNIT_NONE = -1,
     UNIT_HTANK,     // Heavy tank (Mammoth).
@@ -1079,7 +1075,7 @@ typedef enum UnitType : signed char
 **	The variuos aircraft types are enumerated here. These include helicopters
 **	as well as traditional aircraft.
 */
-typedef enum AircraftType : signed char
+typedef enum AircraftType : signed int
 {
     AIRCRAFT_TRANSPORT,  // Transport helicopter.
     AIRCRAFT_A10,        // Ground attack plane.
@@ -1346,7 +1342,7 @@ typedef enum TemplateType : unsigned char
 **	objects function similar to buildings in that they can be driven
 **	behind and can take damage on an individual basis.
 */
-typedef enum TerrainType : signed char
+typedef enum TerrainType : signed int
 {
     TERRAIN_NONE = -1,
     TERRAIN_TREE1,
@@ -1393,7 +1389,7 @@ typedef enum TerrainType : signed char
 **	drawn over the underlying terrain in order to give the effect of
 **	alterations to the terrin. Craters are a good example of this.
 */
-typedef enum SmudgeType : signed char
+typedef enum SmudgeType : signed int
 {
     SMUDGE_NONE = -1,
     SMUDGE_CRATER1,
@@ -1422,7 +1418,7 @@ typedef enum SmudgeType : signed char
 **	Animations are enumerated here. Animations are the high speed and
 **	short lived effects that occur with explosions and fire.
 */
-typedef enum AnimType : signed char
+typedef enum AnimType : signed int
 {
     ANIM_NONE = -1,
     ANIM_FBALL1 = 0,   // Large fireball explosion (bulges rightward).
@@ -1673,7 +1669,7 @@ typedef unsigned short TARGET;
 **	defines for the two types of selected unit boxes. One is for infantry and
 **	the other is for regular units.
 */
-typedef enum SelectEnum : signed char
+typedef enum SelectEnum : signed int
 {
     SELECT_NONE = -1,
     SELECT_INFANTRY,               // Small infantry selection box.
@@ -1793,7 +1789,7 @@ typedef enum BoxStyleEnum : unsigned char
 **	These are the different "warhead" types that can be assigned to the
 **	various projectiles in the game.
 */
-typedef enum WarheadType : signed char
+typedef enum WarheadType : signed int //char
 {
     WARHEAD_NONE = -1,
 
@@ -1818,7 +1814,7 @@ typedef enum WarheadType : signed char
 **	by the projectile it launches, the damage it does, and the rate of
 **	fire.
 */
-typedef enum WeaponType : signed char
+typedef enum WeaponType : signed int //char
 {
     WEAPON_NONE = -1,
 
@@ -2005,7 +2001,7 @@ typedef enum LandType : unsigned char
 /**********************************************************************
 **	The theaters of operation are as follows.
 */
-typedef enum TheaterType : signed char
+typedef enum TheaterType : signed int
 {
     THEATER_NONE = -1,
     THEATER_DESERT,
@@ -2036,7 +2032,7 @@ typedef struct
 **	The trailing number is this define is the width and height (respectively)
 **	of the building in cells.
 */
-typedef enum BSizeType : signed char
+typedef enum BSizeType : signed int
 {
     BSIZE_NONE = -1,
     BSIZE_11 = 0,
@@ -2155,11 +2151,13 @@ typedef enum DirType : unsigned char
 } DirType;
 inline DirType operator+(DirType f1, DirType f2)
 {
-    return (DirType)(((int)f1 + (int)f2) & 0x00FF);
+   return (DirType)(((int)f1 + (int)f2) & 0x00FF);
+
 }
 inline DirType operator+(DirType f1, int f2)
 {
-    return (DirType)(((int)f1 + (int)f2) & 0x00FF);
+   return (DirType)(((int)f1 + (int)f2) & 0x00FF);
+
 }
 
 /****************************************************************************
@@ -2200,7 +2198,7 @@ typedef enum SpeedType : signed char
 /**********************************************************************
 **	These are the sound effect digitized sample file names.
 */
-typedef enum VocType : signed char
+typedef enum VocType : signed int
 {
     VOC_NONE = -1,
 
@@ -2345,7 +2343,7 @@ typedef enum VocType : signed char
     VOC_FIRST = 0
 } VocType;
 
-typedef enum VoxType : signed char
+typedef enum VoxType : signed int
 {
     VOX_NONE = -1,
     VOX_ACCOMPLISHED,      //	mission accomplished
@@ -2456,7 +2454,7 @@ typedef enum VoxType : signed char
 **	data originates in the scenario INI file but is then carried throughout
 **	any saved games.
 */
-typedef enum SourceType : signed char
+typedef enum SourceType : signed int
 {
     SOURCE_NONE = -1, // No defined source (error condition).
     SOURCE_FIRST = 0,
@@ -2845,7 +2843,7 @@ typedef enum : unsigned char
 **	For dialog box shapes, they are left image / right image paired. For buttons,
 **	they are up / down paired.
 */
-typedef enum OptionControlType : signed char
+typedef enum OptionControlType : signed int
 {
     OPTION_NONE = -1,         // No fancy shmancy shape.
     OPTION_DIALOG = 0,        // Small dialog boxes.
@@ -2895,7 +2893,7 @@ typedef struct
 **	A base is broken up into several zones. This type enumerates the
 **	various zones.
 */
-typedef enum ZoneType : signed char
+typedef enum ZoneType : signed int
 {
     ZONE_CORE,  // Center of base.
     ZONE_NORTH, // North section.

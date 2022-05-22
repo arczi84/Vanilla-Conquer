@@ -270,6 +270,7 @@ MixFileClass<T, TCRC>::MixFileClass(char const* filename)
     **	Check to see if the file is available. If it isn't, then
     **	no further processing is needed or possible.
     */
+   /*
     if (!Force_CD_Available(RequiredCD)) {
         Prog_End("MixFileClass Force_CD_Available failed", true);
         if (!RunningAsDLL) { // PG
@@ -277,7 +278,7 @@ MixFileClass<T, TCRC>::MixFileClass(char const* filename)
             exit(EXIT_FAILURE);
         }
     }
-
+*/
     T file(filename); // Working file object.
     Filename = strdup(file.File_Name());
     FileStraw fstraw(file);
@@ -319,8 +320,8 @@ MixFileClass<T, TCRC>::MixFileClass(char const* filename)
         straw->Get(((char*)&fileheader) + sizeof(alternate), sizeof(fileheader) - sizeof(alternate));
     }
 
-    Count = fileheader.count;
-    DataSize = fileheader.size;
+    Count = le16toh(fileheader.count);
+    DataSize = le32toh(fileheader.size);
 
     /*
     **	Load up the offset control array. If RAM is exhausted, then the mixfile is invalid.
@@ -440,8 +441,8 @@ MixFileClass<T, TCRC>::MixFileClass(char const* filename, PKey const* key)
         straw->Get(((char*)&fileheader) + sizeof(alternate), sizeof(fileheader) - sizeof(alternate));
     }
 
-    Count = fileheader.count;
-    DataSize = fileheader.size;
+    Count = le16toh(fileheader.count);
+    DataSize = le32toh(fileheader.size);
     // BGMono_Printf("Mixfileclass %s DataSize: %08x   \n",filename,DataSize);Get_Key();
     /*
     **	Load up the offset control array. If RAM is exhausted, then the mixfile is invalid.
@@ -694,10 +695,12 @@ template <class T, class TCRC> void MixFileClass<T, TCRC>::Free(void)
 
 inline int compfunc(void const* ptr1, void const* ptr2)
 {
-    if (*(int32_t const*)ptr1 < *(int32_t const*)ptr2)
+    if ((*(int32_t const*)ptr1) < (int32_t)le32toh(*(int32_t const*)ptr2)){
         return (-1);
-    if (*(int32_t const*)ptr1 > *(int32_t const*)ptr2)
+    }
+    if ((*(int32_t const*)ptr1) > (int32_t)le32toh(*(int32_t const*)ptr2)){
         return (1);
+    }
     return (0);
 }
 
@@ -779,13 +782,13 @@ bool MixFileClass<T, TCRC>::Offset(int hash, void** realptr, MixFileClass** mixf
             if (mixfile != NULL)
                 *mixfile = ptr;
             if (size != NULL)
-                *size = block->Size;
+                *size = le32toh(block->Size);
             if (realptr != NULL)
                 *realptr = NULL;
             if (offset != NULL)
-                *offset = block->Offset;
+                *offset = le32toh(block->Offset);
             if (realptr != NULL && ptr->Data != NULL) {
-                *realptr = (char*)ptr->Data + block->Offset;
+                *realptr = (char*)ptr->Data + le32toh(block->Offset);
             }
             if (ptr->Data == NULL && offset != NULL) {
                 *offset += ptr->DataStart;

@@ -141,11 +141,14 @@ void Choose_Side(void)
     InterpolationPaletteChanged = true;
     InterpolationPalette = Palette;
     Read_Interpolation_Palette("SIDES.PAL");
-
+#ifndef AMIGA
     nodbrief = Open_Movie("NOD1PRE.VQA");
+#endif
     gdi_start_palette = Load_Interpolated_Palettes("NOD1PRE.VQP");
     Call_Back();
+#ifndef AMIGA
     gdibrief = Open_Movie("GDI1.VQA");
+#endif
     Load_Interpolated_Palettes("GDI1.VQP", true);
 
     WWMouse->Erase_Mouse(&HidPage, true);
@@ -254,6 +257,7 @@ void Choose_Side(void)
     ** Skip the briefings if we're in special mode.
     */
     if (Special.IsJurassic && AreThingiesEnabled) {
+#ifndef AMIGA
         if (nodbrief) {
             VQA_Close(nodbrief);
             VQA_Free(nodbrief);
@@ -264,10 +268,14 @@ void Choose_Side(void)
             VQA_Free(gdibrief);
             gdibrief = NULL;
         }
+#endif
     }
 
     /* play the scenario 1 briefing movie */
     if (Whom == HOUSE_GOOD) {
+#ifdef AMIGA
+        Play_Movie("GDI1");
+#else
         if (nodbrief) {
             VQA_Close(nodbrief);
             VQA_Free(nodbrief);
@@ -278,7 +286,11 @@ void Choose_Side(void)
             VQA_Close(gdibrief);
             VQA_Free(gdibrief);
         }
+#endif
     } else {
+#ifdef AMIGA
+        //Play_Movie("NOD1PRE");
+#else     
         if (gdibrief) {
             VQA_Close(gdibrief);
             VQA_Free(gdibrief);
@@ -288,6 +300,7 @@ void Choose_Side(void)
             VQA_Close(nodbrief);
             VQA_Free(nodbrief);
         }
+#endif   
     }
 
     Free_Interpolated_Palettes();

@@ -43,7 +43,7 @@
 #include "loaddlg.h"
 #include "common/file.h"
 #include "common/framelimit.h"
-
+extern bool drawbox;
 /***********************************************************************************************
  * LoadOptionsClass::LoadOptionsClass -- class constructor                                     *
  *                                                                                             *
@@ -254,6 +254,7 @@ int LoadOptionsClass::Process(void)
     */
     if ((Style == LOAD || Style == WWDELETE) && listbtn.Count() == 0) {
         Clear_List(&listbtn);
+        drawbox = true;
         WWMessageBox().Process(TXT_NO_SAVES);
         return (false);
     }

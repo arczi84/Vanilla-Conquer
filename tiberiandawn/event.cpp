@@ -501,6 +501,9 @@ void EventClass::Execute(void)
     */
     case PLACE:
         CCDebugString("C&C95 - Place packet received\n");
+#ifdef AMIGA	//Otherwise can't place a building
+        Data.Place.Cell = Data.Specific.ID;
+#endif
         Houses.Raw_Ptr(ID)->Place_Object(Data.Place.Type, Data.Place.Cell);
         break;
 

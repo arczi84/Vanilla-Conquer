@@ -15,13 +15,15 @@
 #include "memflag.h"
 #include "soscomp.h"
 #include "sound.h"
+#include "endianness.h"
+//#include "settings.h"
 #include <al.h>
 #include <alc.h>
 #include <algorithm>
 
 enum
 {
-    AUD_CHUNK_MAGIC_ID = 0x0000DEAF,
+    AUD_CHUNK_MAGIC_ID = 0x0000DEAF,    
     VOLUME_MIN = 0,
     VOLUME_MAX = 255,
     PRIORITY_MIN = 0,
@@ -36,7 +38,7 @@ enum
     TIMER_TARGET_RESOLUTION = 10, // 10-millisecond target resolution
     INVALID_AUDIO_HANDLE = -1,
     INVALID_FILE_HANDLE = -1,
-    OPENAL_BUFFER_COUNT = 2,
+    OPENAL_BUFFER_COUNT = 3,
 };
 
 /*
@@ -280,7 +282,7 @@ static void Init_Locked_Data()
     LockedData.ScoreVolume = VOLUME_MAX;
 }
 
-int Simple_Copy(void** source, int* ssize, void** alternate, int* altsize, void** dest, int size)
+int __attribute__((optimize("Ofast"))) Simple_Copy(void** source, int* ssize, void** alternate, int* altsize, void** dest, int size)
 {
     int out = 0;
 
@@ -321,7 +323,7 @@ int Simple_Copy(void** source, int* ssize, void** alternate, int* altsize, void*
     return out;
 }
 
-int Sample_Copy(SampleTrackerType* st,
+int __attribute__((optimize("Ofast"))) Sample_Copy(SampleTrackerType* st,
                 void** source,
                 int* ssize,
                 void** alternate,
@@ -354,12 +356,18 @@ int Sample_Copy(SampleTrackerType* st,
         if (Simple_Copy(source, ssize, alternate, altsize, &fptr, sizeof(fsize)) < sizeof(fsize)) {
             break;
         }
+        fsize = le16toh(fsize);
 
         if (Simple_Copy(source, ssize, alternate, altsize, &dptr, sizeof(dsize)) < sizeof(dsize) || dsize > size) {
             break;
         }
+        //fsize = le16toh(fsize);
+        dsize = le16toh(dsize);
 
-        if (Simple_Copy(source, ssize, alternate, altsize, &mptr, sizeof(magic)) < sizeof(magic)
+        int SimpleCopy = Simple_Copy(source, ssize, alternate, altsize, &mptr, sizeof(magic));
+        magic = le32toh(magic);
+
+        if (SimpleCopy < sizeof(magic)
             || magic != LockedData.MagicNumber) {
             break;
         }
@@ -382,6 +390,7 @@ int Sample_Copy(SampleTrackerType* st,
             } else {
                 s->lpSource = (char*)LockedData.UncompBuffer;
                 s->lpDest = (char*)dest;
+
 
                 sosCODECDecompressData(s, dsize);
             }
@@ -409,6 +418,7 @@ int Stream_Sample_Vol(void* buffer, int size, bool (*callback)(short, short*, vo
 
     AUDHeaderType header;
     memcpy(&header, buffer, sizeof(header));
+    header.Size = le32toh(header.Size);
     int oldsize = header.Size;
     header.Size = size - sizeof(header);
     memcpy(buffer, &header, sizeof(header));
@@ -427,7 +437,7 @@ int Stream_Sample_Vol(void* buffer, int size, bool (*callback)(short, short*, vo
     return playid;
 }
 
-bool File_Callback(short id, short* odd, void** buffer, int* size)
+bool __attribute__((optimize("Ofast"))) File_Callback(short id, short* odd, void** buffer, int* size)
 {
     if (id == INVALID_AUDIO_HANDLE) {
         return false;
@@ -495,7 +505,7 @@ bool File_Callback(short id, short* odd, void** buffer, int* size)
     return false;
 }
 
-void File_Stream_Preload(int index)
+void __attribute__((optimize("Ofast"))) File_Stream_Preload(int index)
 {
     SampleTrackerType* st = &LockedData.SampleTracker[index];
     int maxnum = (LockedData.StreamBufferCount / 2) + 4;
@@ -557,7 +567,7 @@ void File_Stream_Preload(int index)
     }
 }
 
-int File_Stream_Sample_Vol(char const* filename, int volume, bool real_time_start)
+int __attribute__((optimize("Ofast"))) File_Stream_Sample_Vol(char const* filename, int volume, bool real_time_start)
 {
     if (LockedData.DigiHandle == INVALID_AUDIO_HANDLE || filename == nullptr || !Find_File(filename)) {
         return INVALID_AUDIO_HANDLE;
@@ -598,7 +608,7 @@ int File_Stream_Sample_Vol(char const* filename, int volume, bool real_time_star
     return INVALID_AUDIO_HANDLE;
 };
 
-void Sound_Callback()
+void __attribute__((optimize("Ofast"))) Sound_Callback()
 {
     if (!AudioDone && LockedData.DigiHandle != INVALID_AUDIO_HANDLE) {
         Maintenance_Callback();
@@ -650,7 +660,7 @@ void Sound_Callback()
     }
 };
 
-void Maintenance_Callback()
+void __attribute__((optimize("Ofast"))) Maintenance_Callback()
 {
     if (AudioDone) {
         return;
@@ -668,7 +678,7 @@ void Maintenance_Callback()
                     // Work out if we have any space to buffer more data right now.
                     alGetSourcei(st->OpenALSource, AL_BUFFERS_PROCESSED, &processed_buffers);
 
-                    while (processed_buffers > 0 && st->MoreSource) {
+                    while (processed_buffers > 0) {
                         int bytes_copied = Sample_Copy(st,
                                                        &st->Source,
                                                        &st->Remainder,
@@ -680,9 +690,6 @@ void Maintenance_Callback()
                                                        nullptr,
                                                        nullptr);
 
-                        if (bytes_copied != BUFFER_CHUNK_SIZE) {
-                            st->MoreSource = false;
-                        }
 
                         if (bytes_copied > 0) {
                             ALuint buffer;
@@ -691,12 +698,18 @@ void Maintenance_Callback()
                             alSourceQueueBuffers(st->OpenALSource, 1, &buffer);
                             --processed_buffers;
                         }
+                        if (bytes_copied != BUFFER_CHUNK_SIZE && st->FilePending == 0) {
+                            st->MoreSource = false;
+                        }
+                        if (bytes_copied != BUFFER_CHUNK_SIZE) {
+                            break;
+                        }
                     }
                 } else {
                     ALint source_status;
                     alGetSourcei(st->OpenALSource, AL_SOURCE_STATE, &source_status);
 
-                    if (source_status != AL_PLAYING) {
+                    if (source_status != AL_PLAYING && source_status != AL_PAUSED) {
                         st->Service = 0;
                         Stop_Sample(i);
                     }
@@ -747,7 +760,7 @@ void Maintenance_Callback()
     }
 };
 
-void* Load_Sample(char const* filename)
+void* __attribute__((optimize("Ofast"))) Load_Sample(char const* filename)
 {
     if (LockedData.DigiHandle == INVALID_AUDIO_HANDLE || filename == nullptr || !Find_File(filename)) {
         return nullptr;
@@ -771,8 +784,9 @@ void* Load_Sample(char const* filename)
     return data;
 };
 
-long Load_Sample_Into_Buffer(char const* filename, void* buffer, long size)
+long __attribute__((optimize("Ofast"))) Load_Sample_Into_Buffer(char const* filename, void* buffer, long size)
 {
+
     if (buffer == nullptr || size == 0 || LockedData.DigiHandle == INVALID_AUDIO_HANDLE || !filename
         || !Find_File(filename)) {
         return 0;
@@ -789,7 +803,7 @@ long Load_Sample_Into_Buffer(char const* filename, void* buffer, long size)
     return sample_size;
 }
 
-long Sample_Read(int fh, void* buffer, long size)
+long __attribute__((optimize("Ofast"))) Sample_Read(int fh, void* buffer, long size)
 {
     if (buffer == nullptr || fh == INVALID_AUDIO_HANDLE || size <= sizeof(AUDHeaderType)) {
         return 0;
@@ -813,8 +827,38 @@ void Free_Sample(const void* sample)
     }
 };
 
+
+#ifdef SDL_MIXER
+#include <SDL/SDL_mixer.h>
+#endif
+
 bool Audio_Init(int bits_per_sample, bool stereo, int rate, bool reverse_channels)
 {
+#ifdef SDL_MIXER
+    SDL_AudioSpec fmt, obtained;
+
+	// Set 16-bit stereo audio at 22Khz
+	fmt.freq = rate;
+    fmt.format = AUDIO_S16SYS;
+    fmt.channels = 2; //2=stereo
+    fmt.samples = 512;//4096
+	//fmt.callback = mixaudio; ??
+	fmt.userdata = NULL;
+
+	// Open the audio device and start playing sound!
+
+    if (Mix_OpenAudio(fmt.freq, fmt.format, fmt.channels, fmt.samples)) {
+        printf("SS: Unable to open audio: %s", SDL_GetError());
+        return false;
+    }
+    else  
+    {
+    SoundType = SFX_ALFX;
+    SampleType = SAMPLE_SB;
+    AudioDone = false;
+    return true;
+    }
+#endif
     Init_Locked_Data();
     ALCenum error;
     ALCdevice* device = alcOpenDevice(nullptr);
@@ -901,7 +945,7 @@ void Sound_End()
     AudioDone = true;
 };
 
-void Stop_Sample(int index)
+void __attribute__((optimize("Ofast"))) Stop_Sample(int index)
 {
     if (LockedData.DigiHandle != INVALID_AUDIO_HANDLE && index < MAX_SAMPLE_TRACKERS && !AudioDone) {
         SampleTrackerType* st = &LockedData.SampleTracker[index];
@@ -940,7 +984,7 @@ void Stop_Sample(int index)
     }
 };
 
-bool Sample_Status(int index)
+bool __attribute__((optimize("Ofast"))) Sample_Status(int index)
 {
     if (index < 0) {
         return false;
@@ -967,10 +1011,10 @@ bool Sample_Status(int index)
     ALint val;
     alGetSourcei(st->OpenALSource, AL_SOURCE_STATE, &val);
 
-    return val == AL_PLAYING;
+    return val == AL_PLAYING || val == AL_PAUSED;
 };
 
-bool Is_Sample_Playing(const void* sample)
+bool __attribute__((optimize("Ofast"))) Is_Sample_Playing(const void* sample)
 {
     if (AudioDone || sample == nullptr) {
         return false;
@@ -985,7 +1029,7 @@ bool Is_Sample_Playing(const void* sample)
     return false;
 };
 
-void Stop_Sample_Playing(const void* sample)
+void __attribute__((optimize("Ofast"))) Stop_Sample_Playing(const void* sample)
 {
     if (sample != nullptr) {
         for (int i = 0; i < MAX_SAMPLE_TRACKERS; ++i) {
@@ -1014,7 +1058,7 @@ int Attempt_To_Play_Buffer(int id)
     return id;
 }
 
-int Play_Sample_Handle(const void* sample, int priority, int volume, signed short panloc, int id)
+int __attribute__((optimize("Ofast"))) Play_Sample_Handle(const void* sample, int priority, int volume, signed short panloc, int id)
 {
     if (Any_Locked()) {
         return INVALID_AUDIO_HANDLE;
@@ -1035,6 +1079,9 @@ int Play_Sample_Handle(const void* sample, int priority, int volume, signed shor
         AUDHeaderType raw_header;
         memcpy(&raw_header, sample, sizeof(raw_header));
 
+        raw_header.Rate = le16toh(raw_header.Rate);
+        if ((raw_header.Size) < 0) raw_header.Size = le32toh(raw_header.Size);
+		
         // We don't support anything lower than 20000 hz.
         if (raw_header.Rate < 24000 && raw_header.Rate > 20000) {
             raw_header.Rate = 22050;
@@ -1181,7 +1228,7 @@ void Fade_Sample(int index, int ticks)
     }
 };
 
-int Get_Free_Sample_Handle(int priority)
+int __attribute__((optimize("Ofast"))) Get_Free_Sample_Handle(int priority)
 {
     int index = 0;
 
@@ -1231,7 +1278,7 @@ int Get_Digi_Handle()
     return LockedData.DigiHandle;
 }
 
-long Sample_Length(const void* sample)
+long __attribute__((optimize("Ofast"))) Sample_Length(const void* sample)
 {
     if (sample == nullptr) {
         return 0;

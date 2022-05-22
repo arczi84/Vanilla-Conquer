@@ -39,53 +39,53 @@
 Map(screen) class heirarchy.
 
     MapeditClass(most derived class)-- scenario editor
-        ³ MouseClass-- handles mouse animation and display control
-        ³ ScrollClass-- map scroll handler
-        ³ HelpClass-- pop
+        ï¿½ MouseClass-- handles mouse animation and display control
+        ï¿½ ScrollClass-- map scroll handler
+        ï¿½ HelpClass-- pop
     - up help text handler
-        ³ TabClass-- file folder tab screen mode control dispatcher
-        ³ SidebarClass-- displays and controls construction list sidebar
-        ³ PowerClass-- display power production
+        ï¿½ TabClass-- file folder tab screen mode control dispatcher
+        ï¿½ SidebarClass-- displays and controls construction list sidebar
+        ï¿½ PowerClass-- display power production
           / consumption bargraph
-        ³ RadarClass-- displays and controls radar map
-        ³ DisplayClass-- general tactical map display handler
-        ³ MapClass-- general tactical map data handler
-        ³ GScreenClass(pure virtual base class)-- generic screen control
+        ï¿½ RadarClass-- displays and controls radar map
+        ï¿½ DisplayClass-- general tactical map display handler
+        ï¿½ MapClass-- general tactical map data handler
+        ï¿½ GScreenClass(pure virtual base class)-- generic screen control
 
           AbstractClass
-                                  ³
-                                  ³
-                                  ³
-                                  ³ ObjectClass
-                                  ³
-       ÚÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ¿
-          AnimClass  ³ TemplateClass    ³        ÃÄ FuseClass     ³ TerrainClass
-              ³                   ³        ÃÄ FlyClass      ³
-              ³                   ³ BulletClass            ³ OverlayClass MissionClass SmudgeClass
-                                  ³ RadioClass
-                                  ³
-                                  ÃÄ CrewClass
-                                  ÃÄ FlasherClass
-                                  ÃÄ StageClass
-                                  ÃÄ CargoClass TechnoClass
-                                  ³
-         ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ FootClass BuildingClass
-         ³
-         ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ DriveClass InfantryClass         ÃÄ FlyClass
-         ³ AircraftClass TurretClass
-         ³ TarComClass
-         ³ UnitClass
+                                  ï¿½
+                                  ï¿½
+                                  ï¿½
+                                  ï¿½ ObjectClass
+                                  ï¿½
+       ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
+          AnimClass  ï¿½ TemplateClass    ï¿½        ï¿½ï¿½ FuseClass     ï¿½ TerrainClass
+              ï¿½                   ï¿½        ï¿½ï¿½ FlyClass      ï¿½
+              ï¿½                   ï¿½ BulletClass            ï¿½ OverlayClass MissionClass SmudgeClass
+                                  ï¿½ RadioClass
+                                  ï¿½
+                                  ï¿½ï¿½ CrewClass
+                                  ï¿½ï¿½ FlasherClass
+                                  ï¿½ï¿½ StageClass
+                                  ï¿½ï¿½ CargoClass TechnoClass
+                                  ï¿½
+         ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ FootClass BuildingClass
+         ï¿½
+         ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ DriveClass InfantryClass         ï¿½ï¿½ FlyClass
+         ï¿½ AircraftClass TurretClass
+         ï¿½ TarComClass
+         ï¿½ UnitClass
 
           AbstractTypeClass
-                                    ³ ObjectTypeClass
-                                    ³
-             ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
-             ³                      ³            ³                 ³ TechnoTypeClass              ³            ³                 ³
-             ³ BulletTypeClass    ³                 ³
-             ³ TemplateTypeClass         ³
-    ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ TerrainTypeClass
-    ³              ³           ³              ³ UnitTypeClass      ³ BuildingTypeClass      ³
-                   ³ InfantryTypeClass AircraftTypeClass
+                                    ï¿½ ObjectTypeClass
+                                    ï¿½
+             ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
+             ï¿½                      ï¿½            ï¿½                 ï¿½ TechnoTypeClass              ï¿½            ï¿½                 ï¿½
+             ï¿½ BulletTypeClass    ï¿½                 ï¿½
+             ï¿½ TemplateTypeClass         ï¿½
+    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ TerrainTypeClass
+    ï¿½              ï¿½           ï¿½              ï¿½ UnitTypeClass      ï¿½ BuildingTypeClass      ï¿½
+                   ï¿½ InfantryTypeClass AircraftTypeClass
 */
 
 #ifdef NOMINMAX
@@ -164,11 +164,19 @@ extern long LParam;
 extern long Frame;
 inline CELL Coord_XCell(COORDINATE coord)
 {
-    return (CELL)(*(((unsigned char*)&coord) + 1));
+#ifdef __BIG_ENDIAN__
+    return ((CELL)(*(((unsigned char*)&coord) + 2)));
+#else
+    return ((CELL)(*(((unsigned char*)&coord) + 1)));
+#endif
 }
 inline CELL Coord_YCell(COORDINATE coord)
 {
-    return (CELL)(*(((unsigned char*)&coord) + 3));
+#ifdef __BIG_ENDIAN__
+    return ((CELL)(*(((unsigned char*)&coord) + 0)));
+#else
+    return ((CELL)(*(((unsigned char*)&coord) + 3)));
+#endif 
 }
 
 #include "miscasm.h"
@@ -773,18 +781,31 @@ inline int Cell_Y(CELL cell)
 
 inline CELL Coord_XLepton(COORDINATE coord)
 {
+#ifdef __BIG_ENDIAN__
+    return ((CELL)(*(((unsigned char*)&coord) + 3)));
+#else
     return (CELL)(*((unsigned char*)&coord));
+#endif
 }
 
 inline CELL Coord_YLepton(COORDINATE coord)
 {
+#ifdef __BIG_ENDIAN__
+    return ((CELL)(*(((unsigned char*)&coord) + 1)));
+#else
     return (CELL)(*(((unsigned char*)&coord) + 2));
+#endif
 }
 
 inline COORDINATE Coord_Add(COORDINATE coord1, COORDINATE coord2)
 {
+#ifdef __BIG_ENDIAN__
+    return (COORDINATE)MAKE_LONG((*((short*)(&coord1)) + *((short*)(&coord2))),
+                                 (*((short*)(&coord1) + 1) + *((short*)(&coord2) + 1)));
+#else
     return (COORDINATE)MAKE_LONG((*((short*)(&coord1) + 1) + *((short*)(&coord2) + 1)),
                                  (*((short*)(&coord1)) + *((short*)(&coord2))));
+#endif
 }
 
 inline COORDINATE Coord_Sub(COORDINATE coord1, COORDINATE coord2)
@@ -795,8 +816,13 @@ inline COORDINATE Coord_Sub(COORDINATE coord1, COORDINATE coord2)
 
 inline COORDINATE Coord_Snap(COORDINATE coord)
 {
+#if defined(__BIG_ENDIAN__)
+    return (COORDINATE)MAKE_LONG((((*((unsigned short*)&coord)) & 0xFF00) | 0x80),
+                                 (((*(((unsigned short*)&coord) + 1)) & 0xFF00) | 0x80));
+#else
     return (COORDINATE)MAKE_LONG((((*(((unsigned short*)&coord) + 1)) & 0xFF00) | 0x80),
                                  (((*((unsigned short*)&coord)) & 0xFF00) | 0x80));
+#endif                                
 }
 
 inline COORDINATE Coord_Mid(COORDINATE coord1, COORDINATE coord2)

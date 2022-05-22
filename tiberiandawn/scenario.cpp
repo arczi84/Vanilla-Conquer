@@ -115,7 +115,11 @@ bool Start_Scenario(char* root, bool briefing)
 #ifdef NEWMENU
 
             char buffer[25];
+#ifdef AMIGA
+            sprintf(buffer, "movies/%s.mpg", BriefMovie);   
+#else
             sprintf(buffer, "%s.VQA", BriefMovie);
+#endif
             CCFileClass file(buffer);
 
             if (GameToPlay == GAME_NORMAL && !file.Is_Available()) {
@@ -736,8 +740,13 @@ bool Restate_Mission(char const* name, int button1, int button2)
 #ifdef NEWMENU
         char buffer[25];
         char buffer1[25];
+#ifdef AMIGA
+        sprintf(buffer, "movies/%s.mpg", BriefMovie);
+        sprintf(buffer1, "movies/%s.mpg", ActionMovie);        
+#else
         sprintf(buffer, "%s.VQA", BriefMovie);
         sprintf(buffer1, "%s.VQA", ActionMovie);
+#endif
         CCFileClass file1(buffer);
         CCFileClass file2(buffer1);
         if (!file1.Is_Available() && !file2.Is_Available()) {

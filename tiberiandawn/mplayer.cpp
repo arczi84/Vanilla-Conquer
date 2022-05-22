@@ -53,7 +53,7 @@ int Choose_Internet_Game(void);
 int Get_Internet_Host_Or_Join(void);
 int Get_IP_Address(void);
 void Show_Internet_Connection_Progress(void);
-
+extern bool drawbox;
 /***********************************************************************************************
  * Select_MPlayer_Game -- prompts user for NULL-Modem, Modem, or Network game                  *
  *                                                                                             *
@@ -311,6 +311,8 @@ GameType Select_MPlayer_Game(void)
         case (KN_ESC):
         case (BUTTON_CANCEL | KN_BUTTON):
             selection = BUTTON_CANCEL;
+            TitlePicture = strdup("screenMulti.pcx");
+            Blit_Hid_Page_To_Seen_Buff();
             pressed = true;
             break;
 
@@ -365,12 +367,18 @@ GameType Select_MPlayer_Game(void)
             switch (selection) {
             case (BUTTON_SKIRMISH):
                 GameToPlay = GAME_SKIRMISH;
+                TitlePicture = strdup("skirmishmenu.pcx");
+                Blit_Hid_Page_To_Seen_Buff();
+                drawbox = false;//true;
                 Read_MultiPlayer_Settings();
                 if (Com_Scenario_Dialog()) {
                     retval = GAME_SKIRMISH;
                     process = false;
                 } else {
                     buttons[curbutton]->IsPressed = false;
+                    TitlePicture = strdup("screenMulti.pcx");
+                    Blit_Hid_Page_To_Seen_Buff();
+					drawbox = false;
                     GameToPlay = GAME_NORMAL;
                     display = REDRAW_ALL;
                 }
@@ -486,6 +494,8 @@ GameType Select_MPlayer_Game(void)
 
             case (BUTTON_CANCEL):
                 retval = GAME_NORMAL;
+                TitlePicture = strdup("screenMulti.pcx");
+                Blit_Hid_Page_To_Seen_Buff();
                 process = false;
                 break;
             }

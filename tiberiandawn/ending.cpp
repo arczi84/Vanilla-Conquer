@@ -63,7 +63,7 @@ void GDI_Ending(void)
     } else {
         Play_Movie("GDIEND1");
     }
-
+#ifndef AMIGA
     CountDownTimerClass count;
     if (CCFileClass("TRAILER.VQA").Is_Available()) {
         Fade_Palette_To(BlackPalette, FADE_PALETTE_MEDIUM, Call_Back);
@@ -93,6 +93,7 @@ void GDI_Ending(void)
     Fade_Palette_To(BlackPalette, FADE_PALETTE_MEDIUM, Call_Back);
 
     Play_Movie("CC2TEASE");
+#endif
 }
 
 #ifndef DEMO

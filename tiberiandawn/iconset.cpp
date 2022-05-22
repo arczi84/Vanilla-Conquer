@@ -323,6 +323,6 @@ void* Get_Icon_Set_Map(void const* iconset)
     IControl_Type* icontrol;
     icontrol = (IControl_Type*)iconset;
     if (icontrol)
-        return (Add_Long_To_Pointer(iconset, (long)icontrol->Map));
+        return (Add_Long_To_Pointer(iconset, (long)le32toh((long)icontrol->Map)));
     return (NULL);
 }

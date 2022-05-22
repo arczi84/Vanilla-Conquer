@@ -73,6 +73,44 @@
 
 void* Get_Shape_Header_Data(void* ptr);
 
+#ifdef AMIGA
+
+#include "KI_header.h"
+
+static const __attribute__((used)) char *stack_cookie = "\0$STACK:500000\0";
+
+#undef Node
+#undef List
+#define Node NodeA
+#define List ListA
+#include <pthread.h>
+#undef Node
+#undef List
+
+
+extern uint8_t* KI_buffer16_VOC[VOC_COUNT];
+extern uint8_t* KI_buffer16_VOX[VOX_COUNT];
+extern uint8_t* KI_buffer16_MUSIC[THEME_COUNT];
+
+extern AUDIO_SAMPLE sound_samples_VOC[VOC_COUNT];
+extern AUDIO_SAMPLE sound_samples_VOX[VOX_COUNT];
+
+extern unsigned char* raw_music_data;
+void init_KI_audio(void);
+void close_KI_audio(void);
+
+extern AUDIO_SAMPLE music_samples[KI_NUM_MUSIC_TRACK];
+
+// KI audio thread stuff
+extern pthread_t audio_thread;
+extern volatile int audio_thread_paused;
+extern int audio_thread_created;
+void* KI_audio_thread(void* ptr);
+extern volatile int quit_audio_thread;
+int thread_return_value;
+
+#endif
+
 /****************************************
 **	Function prototypes for this module **
 *****************************************/
@@ -126,10 +164,16 @@ bool InMainLoop = false;
  *   10/01/1994 JLB : Created.                                                                 *
  *=============================================================================================*/
 extern int TotalLocks;
+extern unsigned char Apollo_AMMXon;
+
 void Main_Game(int argc, char* argv[])
 {
     bool fade = false; // don't fade title screen the first time through
-
+	
+#ifdef AMIGA
+    if (Apollo_AMMXon)
+        init_KI_audio();
+#endif	
     /*
     **	Perform one-time-only initializations
     */
@@ -137,7 +181,14 @@ void Main_Game(int argc, char* argv[])
         return;
     }
 
+    /*
+    **	Set 640x400 in SAGA
+    */
+    //*(volatile unsigned short int*)0xDFF1F4 = (unsigned short int)0x0401;
+
     CCDebugString("C&C95 - Game initialisation complete.\n");
+
+    //logo_end = true;
     /*
     **	Game processing loop:
     **	1) Select which game to play, or whether to exit (don't fade the palette
@@ -145,6 +196,7 @@ void Main_Game(int argc, char* argv[])
     **	2) Invoke either the main-loop routine, or the editor-loop routine,
     **		until they indicate that the user wants to exit the scenario.
     */
+
     while (Select_Game(fade)) {
 
         if (RunningAsDLL) {
@@ -381,6 +433,10 @@ void Main_Game(int argc, char* argv[])
 #ifndef NOMEMCHECK
     Uninit_Game();
 #endif
+#ifdef AMIGA
+    if (Apollo_AMMXon)
+    	close_KI_audio();
+#endif
 }
 
 /***********************************************************************************************
@@ -442,8 +498,8 @@ void Keyboard_Process(KeyNumType& input)
     }
 #endif
 
-#ifdef VIRGIN_CHEAT_KEYS
-    if (Debug_Playtest && input == (KN_W | KN_ALT_BIT)) {
+#if 1//def VIRGIN_CHEAT_KEYS //next level
+    if (/*Debug_Playtest &&*/ input == (KN_W /*| KN_ALT_BIT*/)) {
         PlayerPtr->Blockage = false;
         PlayerPtr->Flag_To_Win();
     }
@@ -2052,6 +2108,7 @@ int Load_Interpolated_Palettes(char const* filename, bool add)
     if (file.Is_Available()) {
         file.Open(READ);
         file.Read(&num_palettes, 4);
+        num_palettes = le32toh(num_palettes);
 
         for (i = 0; i < num_palettes; i++) {
             InterpolatedPalettes[i + start_palette] = (unsigned char*)malloc(65536);
@@ -2106,16 +2163,56 @@ extern bool VQPaletteChange;
 extern void Suspend_Audio_Thread(void);
 extern void Resume_Audio_Thread(void);
 
+#ifdef AMIGA
+
+extern bool enable_triple;
+extern void KI_stop_all_audio();
+
+extern "C" {
+
+LONG Execute( CONST_STRPTR string, long  file, long file2 ); 
+}
+
+#endif
+
+char params[128];
+bool params_read = false;
+
+void read_riva_params()
+{
+    char *filename = "player.ini";
+    FILE *fp = fopen(filename, "r");
+
+    if (fp == NULL)
+    {
+        printf("Error: could not open file %s. Trying riva.txt...\n", filename);
+        fclose(fp);
+        FILE *fp = fopen("riva.txt", "r");
+        if (fp == NULL) {
+            printf("Error: could not open file riva.txt. Riva will be used.\n");
+            fclose(fp);
+            return;
+        }
+    }
+
+    fgets(params, 128, fp);
+    params[strcspn(params, "\n")] = 0;
+
+    // close the file
+    fclose(fp);
+
+    params_read = true;
+}
+
 // Play
 extern void Play_Movie_GlyphX(const char* movie_name, ThemeType theme);
 
-void Play_Movie(char const* name, ThemeType theme, bool clrscrn)
+void __attribute__((optimize("Ofast"))) Play_Movie(char const* name, ThemeType theme, bool clrscrn)
 {
-#if REMASTER_BUILD
     if (strcmp(name, "x") == 0 || strcmp(name, "X") == 0) {
         return;
     }
-
+#if REMASTER_BUILD
     Play_Movie_GlyphX(name, theme);
     return;
 #else
@@ -2132,6 +2229,34 @@ void Play_Movie(char const* name, ThemeType theme, bool clrscrn)
     if (GameToPlay != GAME_NORMAL) {
         return;
     }
+
+#ifdef AMIGA
+    if (!params_read)
+        read_riva_params();
+    /*
+    **	Set 640x400 in SAGA
+    */
+    if (Apollo_AMMXon) {
+        //enable_triple = true;
+        KI_stop_all_audio();
+    }
+
+    if (name) {
+        char fullname[_MAX_FNAME + _MAX_EXT];
+        if (!params_read)
+            sprintf(fullname,"RIVA display=pip fullpip pubscreen=vanillatd movies/%s.mpg",name);
+        else
+            sprintf(fullname,"%s movies/%s.mpg", params, name);
+
+        Execute(fullname,0,0);
+
+        if (Apollo_AMMXon) {
+            *(volatile unsigned short int*)0xDFF1F4 = (unsigned short int)0x0401;
+        }
+        else
+    		return; 
+    }
+#endif
 
     memset(&PaletteInterpolationTable[0][0], 0, 65536);
 
@@ -2219,10 +2344,14 @@ void Play_Movie(char const* name, ThemeType theme, bool clrscrn)
 
 #endif // GERMAN
 
+
                 Load_Interpolated_Palettes(palname);
                 // Set_Palette(BlackPalette);
                 SysMemPage.Clear();
                 InMovie = true;
+#ifdef AMIGA
+    			enable_triple = false;
+#endif
                 VQA_Play(vqa, VQAMODE_RUN);
                 VQA_Close(vqa);
                 // Resume_Audio_Thread();
@@ -2258,6 +2387,8 @@ void Play_Movie(char const* name, ThemeType theme, bool clrscrn)
         }
         Show_Mouse();
     }
+	if (Apollo_AMMXon)
+    	*(volatile unsigned short int*)0xDFF1F4 = (unsigned short int)0x0401;
 #endif
 }
 
@@ -4018,13 +4149,90 @@ bool Is_DOS_Files(void)
 {
     static bool already_checked = false;
     static bool is_dos = false;
-
     if (!already_checked) {
         CCFileClass local("LOCAL.MIX");
         CCFileClass cclocal("CCLOCAL.MIX");
         is_dos = local.Is_Available() && !cclocal.Is_Available();
         already_checked = true;
     }
-
     return is_dos;
 }
+
+#ifdef AMIGA
+
+void init_KI_audio(void)
+{
+    for (int i = 0; i < VOC_COUNT; i++)
+    {
+        *KI_buffer16_VOC[i] = 0;
+        sound_samples_VOC[i].file_data = 0;
+    }
+    for (int i = 0; i < VOX_COUNT; i++)
+    {
+        *KI_buffer16_VOX[i] = 0;
+        sound_samples_VOX[i].file_data = 0;
+    }
+   /* for (int i = 0; i < THEME_COUNT; i++)
+    {
+        *KI_buffer16_MUSIC[i] = 0;
+    }
+    unsigned char* raw_music_data = 0;*/
+    for (int i = 0; i < KI_NUM_MUSIC_TRACK; i++)
+    {
+        music_samples[i].file_data = 0;
+    }
+
+    //printf("Trying to create KI thread. audio_thread_paused=%d\n", audio_thread_paused);
+    thread_return_value=pthread_create(&audio_thread, NULL, KI_audio_thread, NULL);
+    audio_thread_created = 1;
+    sleep(2);
+    //printf("After starting: audio_thread_paused=%d\n", audio_thread_paused);
+}
+void close_KI_audio(void)
+{
+    for (int i = 0; i < VOC_COUNT; i++)
+    {
+        if (*KI_buffer16_VOC[i] != 0)
+            free(*KI_buffer16_VOC[i]);
+        if (sound_samples_VOC[i].file_data != 0)
+            free(sound_samples_VOC[i].file_data);
+    }
+    for (int i = 0; i < VOX_COUNT; i++)
+    {
+        if (*KI_buffer16_VOX[i] != 0)
+            free(*KI_buffer16_VOX[i]);
+        if (sound_samples_VOX[i].file_data != 0)
+            free(sound_samples_VOX[i].file_data);
+    }
+    /*for (int i = 0; i < THEME_COUNT; i++)
+    {
+        if(*KI_buffer16_MUSIC[i] != 0)
+            free(*KI_buffer16_MUSIC[i]);
+    }
+    if (*raw_music_data)
+        free(raw_music_data);*/
+    //uint8_t* KI_buffer16[VOC_COUNT];
+
+    for (int i = 0; i < KI_NUM_MUSIC_TRACK; i++)
+    {
+        if (music_samples[i].file_data)
+        {
+            free(music_samples[i].file_data);
+            music_samples[i].file_data = 0;
+        }
+    }
+
+    if (audio_thread_created)
+    {
+        quit_audio_thread = 1;
+        pthread_join(audio_thread, NULL);
+    }
+}
+
+#else
+
+void init_KI_audio(void) {}
+
+#endif
+
+  

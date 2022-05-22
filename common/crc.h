@@ -37,6 +37,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include "endianness.h"
 
 /*
 **	This is a CRC engine class. It will process submitted data and generate a CRC from it.
@@ -88,7 +89,7 @@ protected:
     int32_t Value(void) const
     {
         if (Buffer_Needs_Data()) {
-            return (lrotl(CRC, 1) + StagingBuffer.Composite);
+            return (lrotl(CRC, 1) + le32toh(StagingBuffer.Composite));
         }
         return (CRC);
     };

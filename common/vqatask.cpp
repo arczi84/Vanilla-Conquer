@@ -16,6 +16,7 @@
 #include "vqafile.h"
 #include "vqaloader.h"
 #include <string.h>
+#include <stdio.h>
 
 bool VQAMovieDone = false;
 
@@ -59,13 +60,20 @@ void VQA_Reset(VQAHandle* handle)
     data->EndTime = 0;
 }
 
+extern void KI_stop_all_audio();
+extern unsigned char Apollo_AMMXon;
+
 // VQAPlayMode
 // 0 = play
 // 1 =
 // 2 =
 // 3 =
-VQAErrorType VQA_Play(VQAHandle* handle, VQAPlayMode mode)
+VQAErrorType __attribute__((optimize("Ofast"))) VQA_Play(VQAHandle* handle, VQAPlayMode mode)
 {
+	if (Apollo_AMMXon)
+    	KI_stop_all_audio();
+	else return VQAERR_NONE;
+	
     VQAErrorType rc = VQAERR_NONE;
 
 #ifdef _WIN32
@@ -162,6 +170,10 @@ VQAErrorType VQA_Play(VQAHandle* handle, VQAPlayMode mode)
             if (config->OptionFlags & VQAOPTF_MONO) {
                 // VQA_UpdateMono(handle);
             }
+#ifdef AMIGA		
+			if (Apollo_AMMXon)
+					return;
+#endif
         }
     } else {
         if (!(data->Flags & VQA_DATA_FLAG_64)) {

@@ -1167,6 +1167,9 @@ void Map_Selection(void)
  * HISTORY:                                                                *
  *   04/27/1995 BWG : Created.                                             *
  *=========================================================================*/
+
+bool enable_delay;
+
 void Print_Statistics(int country, int xpos, int ypos)
 {
     int index, newx;
@@ -1229,6 +1232,7 @@ void Print_Statistics(int country, int xpos, int ypos)
     xpos = (xpos > 128) ? 8 : 136;
 #endif
     ypos = (ypos > 100) ? 8 : 104 - 6;
+    enable_delay = 1;
     if (PlayerPtr->Class->House == HOUSE_GOOD) {
         Alloc_Object(new ScorePrintClass(_countryname[GDIStats[country].nameindex], xpos, ypos, _greenpal));
         Call_Back_Delay(strlen(Text_String(_countryname[GDIStats[country].nameindex])) * 3);
@@ -1322,7 +1326,7 @@ void Print_Statistics(int country, int xpos, int ypos)
 #else
     Alloc_Object(new ScorePrintClass(TXT_MAP_CLICK2, 160 - (17 * 3), 193 - 6, _greenpal));
 #endif
-
+    enable_delay = 0;
     int done = 0;
     while (!done) {
         done = 1;

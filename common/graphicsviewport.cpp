@@ -141,7 +141,7 @@ GraphicViewPortClass::~GraphicViewPortClass(void)
  * HISTORY:                                                                *
  *   05/10/1994 PWG : Created.                                             *
  *=========================================================================*/
-void GraphicViewPortClass::Attach(GraphicBufferClass* gbuffer, int x, int y, int w, int h)
+void __attribute__((optimize("Ofast"))) GraphicViewPortClass::Attach(GraphicBufferClass* gbuffer, int x, int y, int w, int h)
 {
     /*======================================================================*/
     /* Can not attach a Graphic View Port if it is actually the physical    */
@@ -299,7 +299,7 @@ extern void Colour_Debug(int call_number);
  *   09-22-95 11:05am ST : Created                                                             *
  *=============================================================================================*/
 
-bool GraphicViewPortClass::DD_Linear_Blit_To_Linear(GraphicViewPortClass& dest,
+bool __attribute__((optimize("Ofast"))) GraphicViewPortClass::DD_Linear_Blit_To_Linear(GraphicViewPortClass& dest,
                                                     int source_x,
                                                     int source_y,
                                                     int dest_x,

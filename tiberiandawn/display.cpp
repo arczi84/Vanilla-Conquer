@@ -1532,7 +1532,7 @@ bool DisplayClass::Scroll_Map(DirType facing, int& distance, bool really)
     /*
     **	Determine the coordinate that it wants to scroll to.
     */
-    COORDINATE coord = Coord_Move(TacticalCoord, facing, distance);
+    COORDINATE coord = Coord_Move(TacticalCoord, facing, distance*3); //art
 
     /*
     **	Clip the new coordinate to the edges of the game world.
@@ -1957,12 +1957,10 @@ bool DisplayClass::Coord_To_Pixel(COORDINATE coord, int& x, int& y)
     if (coord) {
         int xtac = Pixel_To_Lepton(Lepton_To_Pixel(Coord_X(TacticalCoord)));
         int xoff = Pixel_To_Lepton(Lepton_To_Pixel(Coord_X(coord)));
-
         xoff = (xoff + EDGE_ZONE) - xtac;
         if (xoff <= TacLeptonWidth + EDGE_ZONE * 2) {
             int ytac = Pixel_To_Lepton(Lepton_To_Pixel(Coord_Y(TacticalCoord)));
             int yoff = Pixel_To_Lepton(Lepton_To_Pixel(Coord_Y(coord)));
-
             yoff = (yoff + EDGE_ZONE) - ytac;
             if (yoff <= TacLeptonHeight + EDGE_ZONE * 2) {
                 x = Lepton_To_Pixel(xoff) - CELL_PIXEL_W * 2;
@@ -4366,13 +4364,9 @@ bool DisplayClass::Is_Spot_Free(COORDINATE coord) const
  *=============================================================================================*/
 COORDINATE DisplayClass::Center_Map(COORDINATE center)
 {
-    int x = 0;
-    //	unsigned x = 0;
-    int y = 0;
-    //	unsigned y = 0;
-    bool centerit = false;
-
     if (CurrentObject.Count()) {
+        unsigned x = 0;
+        unsigned y = 0;
 
         for (int index = 0; index < CurrentObject.Count(); index++) {
             COORDINATE coord = CurrentObject[index]->Center_Coord();
@@ -4383,29 +4377,9 @@ COORDINATE DisplayClass::Center_Map(COORDINATE center)
 
         x /= CurrentObject.Count();
         y /= CurrentObject.Count();
-        centerit = true;
-    }
+        Set_Tactical_Position(XY_Coord(x - (TacLeptonWidth / 2), y - (TacLeptonHeight / 2)));
 
-    if (center != 0L) {
-        x = Coord_X(center);
-        y = Coord_Y(center);
-        centerit = true;
-    }
-
-    if (centerit) {
-        center = XY_Coord(x, y);
-
-        x = x - (int)TacLeptonWidth / 2;
-        if (x < Cell_To_Lepton(MapCellX))
-            x = Cell_To_Lepton(MapCellX);
-
-        y = y - (int)TacLeptonHeight / 2;
-        if (y < Cell_To_Lepton(MapCellY))
-            y = Cell_To_Lepton(MapCellY);
-
-        Set_Tactical_Position(XY_Coord(x, y));
-
-        return center;
+        return XY_Coord(x, y);
     }
 
     return 0;

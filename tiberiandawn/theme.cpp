@@ -50,6 +50,13 @@
 
 #include "theme.h"
 
+extern unsigned char Apollo_AMMXon;
+
+int KI_Play_MUSIC(char* name, int volume);
+
+void KI_stop_all_audio();
+
+
 /*
 **	These are the actual filename list for the theme sample files.
 */
@@ -221,6 +228,9 @@ void ThemeClass::AI(void)
  *=============================================================================================*/
 ThemeType ThemeClass::Next_Song(ThemeType theme)
 {
+	if (Apollo_AMMXon)
+    	return theme;
+
     if (theme == THEME_NONE) {
         theme = Next_Song(THEME_PICK_ANOTHER);
     } else {
@@ -238,6 +248,43 @@ ThemeType ThemeClass::Next_Song(ThemeType theme)
                 theme = newtheme;
 
             } else {
+
+                /*
+                **	Sequential score playing.
+                */
+                do {
+                    theme++;
+                    if (theme > THEME_LAST) {
+                        theme = THEME_FIRST;
+                    }
+                } while (!Is_Allowed(theme));
+            }
+        }
+    }
+    return (theme);
+}
+
+ThemeType ThemeClass::Next_Song_KI(ThemeType theme)
+{
+    if (theme == THEME_NONE) {
+        theme = Next_Song(THEME_PICK_ANOTHER);
+    }
+    else {
+        if (theme == THEME_PICK_ANOTHER || (!_themes[theme].Repeat && !Options.IsScoreRepeat)) {
+            if (Options.IsScoreShuffle) {
+
+                /*
+                **	Shuffle the theme, but never pick the same theme that was just
+                **	playing.
+                */
+                ThemeType newtheme;
+                do {
+                    newtheme = Sim_Random_Pick(THEME_FIRST, THEME_LAST);
+                } while (newtheme == theme || !Is_Allowed(newtheme));
+                theme = newtheme;
+
+            }
+            else {
 
                 /*
                 **	Sequential score playing.
@@ -272,6 +319,10 @@ ThemeType ThemeClass::Next_Song(ThemeType theme)
  *=============================================================================================*/
 void ThemeClass::Queue_Song(ThemeType theme)
 {
+	if (Apollo_AMMXon) {
+	    if (theme == THEME_NONE)
+	        KI_Play_MUSIC(NULL, 0);
+	}
     if (ScoresPresent && SampleType && !Debug_Quiet && (Pending == THEME_NONE || Pending == THEME_PICK_ANOTHER)) {
         if (!Options.ScoreVolume && theme != THEME_NONE)
             return;
@@ -299,6 +350,56 @@ void ThemeClass::Queue_Song(ThemeType theme)
  *=============================================================================================*/
 int ThemeClass::Play_Song(ThemeType theme)
 {
+	if (Apollo_AMMXon) {
+	    int check_music = KI_Play_MUSIC((char *)Theme_File_Name(theme), Options.ScoreVolume/4);
+
+	    if (check_music== 0)
+	    {
+	        //printf("*");
+	        // all is goood... 
+	        Score = theme;
+	        return -1; 
+	    }
+	    else if (check_music == 1)
+	    {
+	        //printf("Picking new song...\n");
+	        // song finished! Pick a new one
+	        Score = Next_Song_KI(theme);  // this should pick a theme song that is not the current theme...
+	        Play_Song(Score);
+	    }
+	    else // check music=2, or -1
+	    {
+	        //printf("#");
+	
+	
+    if (ScoresPresent && SampleType && !Debug_Quiet && Options.ScoreVolume) {
+        Stop();
+        Score = theme;
+        if (theme >= THEME_FIRST) {
+
+#ifdef DEMO
+            if (_themes[theme].Scenario != 99) {
+                CCFileClass file(Theme_File_Name(theme));
+                if (file.Is_Available()) {
+                    Current = File_Stream_Sample_Vol(Theme_File_Name(theme), 0xFF, true);
+                } else {
+                    Current = -1;
+                }
+            } else {
+                Current = -1;
+            }
+#else
+            Current = File_Stream_Sample_Vol(Theme_File_Name(theme), 0xFF, true);
+#endif
+            }
+        }
+        else
+            return (Current);
+			
+        }
+    }
+    else
+    {
     if (ScoresPresent && SampleType && !Debug_Quiet && Options.ScoreVolume) {
         Stop();
         Score = theme;
@@ -321,6 +422,11 @@ int ThemeClass::Play_Song(ThemeType theme)
         }
     }
     return (Current);
+    }
+	
+   // printf("THEME NAME: %s\n", Theme_File_Name(theme));
+
+
 }
 
 /***********************************************************************************************
@@ -404,6 +510,8 @@ void ThemeClass::Stop(void)
             Pending = THEME_NONE;
         }
     }
+    if (Apollo_AMMXon)
+        KI_stop_all_audio();
 }
 
 void ThemeClass::Suspend(void)
@@ -414,6 +522,8 @@ void ThemeClass::Suspend(void)
         Pending = Score;
         Score = THEME_NONE;
     }
+    if (Apollo_AMMXon)
+        KI_stop_all_audio();
 }
 
 /***********************************************************************************************

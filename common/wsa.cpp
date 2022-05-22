@@ -191,6 +191,16 @@ void* Open_Animation(char const* file_name,
     fh = Open_File(file_name, READ);
     Read_File(fh, (char*)&file_header, sizeof(WSA_FileHeaderType));
 
+    file_header.largest_frame_size = le16toh(file_header.largest_frame_size);
+    file_header.total_frames = le16toh(file_header.total_frames);
+    file_header.pixel_x = le16toh(file_header.pixel_x);
+    file_header.pixel_y = le16toh(file_header.pixel_y);
+    file_header.pixel_width = le16toh(file_header.pixel_width);
+    file_header.pixel_height = le16toh(file_header.pixel_height);
+    file_header.flags = (int16_t)le16toh(file_header.flags);
+    file_header.frame0_offset = le32toh(file_header.frame0_offset);
+    file_header.frame0_end = le32toh(file_header.frame0_end);
+	
     /*======================================================================*/
     /* If the file has an attached palette then if we have a valid palette	*/
     /*		pointer we need to read it in.												*/
@@ -472,6 +482,16 @@ bool Animate_Frame(void* handle,
     // resides
     sys_header = (SysAnimHeaderType*)handle;
 
+   if (sys_header->total_frames>700) 
+    {
+        sys_header->current_frame =  le16toh(sys_header->current_frame);
+        sys_header->total_frames = le16toh(sys_header->total_frames);
+        sys_header->pixel_x  = le16toh(sys_header->pixel_x);
+        sys_header->pixel_y  = le16toh(sys_header->pixel_y);
+        sys_header->pixel_width  = le16toh(sys_header->pixel_width);
+        sys_header->pixel_height  = le16toh(sys_header->pixel_height);
+    }
+    
     // Get the total number of frames
     total_frames = sys_header->total_frames;
 
@@ -1025,17 +1045,17 @@ static unsigned long Get_Resident_Frame_Offset(char* file_buffer, int frame)
 
     // If there is a frame 0, the calculate its size.
     lptr = (uint32_t*)file_buffer;
-
-    if (*lptr) {
-        frame0_size = lptr[1] - *lptr;
+    if (le32toh(*lptr)) {
+        frame0_size = le32toh(lptr[1]) - le32toh(*lptr);
     } else {
         frame0_size = 0;
     }
 
     // Return the offset into RAM for the frame.
     lptr += frame;
-    if (*lptr)
-        return (*lptr - (frame0_size + WSA_FILE_HEADER_SIZE));
+
+    if (le32toh(*lptr))
+        return (le32toh(*lptr) - (frame0_size + WSA_FILE_HEADER_SIZE));
     else
         return (0L);
 }
@@ -1062,7 +1082,10 @@ static unsigned long Get_File_Frame_Offset(int file_handle, int frame, int palet
     if (Read_File(file_handle, (char*)&offset, sizeof(uint32_t)) != sizeof(uint32_t)) {
         offset = 0L;
     }
+	
+    offset = le32toh(offset);
     offset += palette_adjust;
+    
     return (offset);
 }
 

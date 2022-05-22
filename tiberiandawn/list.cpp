@@ -687,6 +687,7 @@ void ListClass::Draw_Entry(int index, int x, int y, int width, int selected)
         } else {
             if (!(flags & TPF_USE_GRAD_PAL)) {
                 flags = flags | TPF_MEDIUM_COLOR;
+                LogicPage->Fill_Rect(x, y, x + width, y + LineHeight, 0/*CC_GREEN_SHADOW*/);//arczi
             }
         }
 

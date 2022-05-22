@@ -45,6 +45,7 @@
 */
 #include "wwstd.h"
 #include "shape.h"
+#include "endianness.h"
 
 /***************************************************************************
  * Get_Shape_Size -- Fetch the size of the shape in memory.                *
@@ -78,7 +79,7 @@ int Get_Shape_Size(void const* shape)
     /*
     -------------------------- Returns shape's size --------------------------
     */
-    return (shp->ShapeSize);
+    return (le16toh(shp->ShapeSize));
 
 } /* end of Get_Shape_Size */
 
@@ -103,7 +104,7 @@ int Get_Shape_Uncomp_Size(void const* shape)
 {
     Shape_Type* shp = (Shape_Type*)shape;
 
-    return (shp->DataLength);
+    return (le16toh(shp->DataLength));
 
 } /* end of Get_Shape_Uncomp_Size */
 
@@ -201,7 +202,7 @@ void* Extract_Shape(void const* buffer, int shape)
     if (!buffer || shape < 0 || shape >= block->NumShapes)
         return (NULL);
 
-    offset = block->Offsets[shape];
+    offset = (long)le32toh(block->Offsets[shape]);
 
     return (bytebuf + 2 + offset);
 
@@ -228,7 +229,7 @@ int Get_Shape_Width(void const* shape)
 {
     Shape_Type* shp = (Shape_Type*)shape;
 
-    return (shp->Width);
+    return (le16toh(shp->Width));
 
 } /* end of Get_Shape_Width */
 
@@ -253,7 +254,7 @@ int Get_Shape_Height(void const* shape)
 {
     Shape_Type* shp = (Shape_Type*)shape;
 
-    return (shp->Height);
+    return (le16toh(shp->Height));
 
 } /* end of Get_Shape_Height */
 

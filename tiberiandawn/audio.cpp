@@ -38,7 +38,219 @@
  *   Stop_Speaking -- Forces the EVA voice to stop talking.                                    *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+extern unsigned char Apollo_AMMXon;
+
 #include "function.h"
+#include <memory.h>
+#include <math.h>
+#include "ccfile.h" 
+//#include "defines.h"
+
+//#include "mssleep.h"
+// KI stuff
+#include "audio_regs.c"
+#include "soscomp.h"
+#include "KI_header.h"
+#undef Node
+#undef List
+#define Node NodeA
+#define List ListA
+#include <pthread.h>
+#undef Node
+#undef List
+
+#define u16 uint16_t
+#define u32 uint32_t
+
+#define USE_DMA_FOR_SAMPLE_FINISH 1
+#define VOC_TYPE_AUDIO 0
+#define VOX_TYPE_AUDIO 1
+
+unsigned short* DMACONR = (unsigned short*)0xDFF002;  //<=- this should be DMA_CON
+unsigned short* DMACONR2 = (unsigned short*)0xDFF202;  //<=- this should be DMA_CONR2    
+
+pthread_t audio_thread;
+volatile int audio_thread_paused = 0;
+int audio_thread_created = 0;
+void* KI_audio_thread(void* ptr);
+volatile int quit_audio_thread = 0;
+
+volatile char file_to_load[50];
+volatile AUDIO_SAMPLE *destination_audio_sample;
+volatile int signal_audio_thread_to_load=0;
+volatile int signal_main_thread_that_audio_has_loaded=0;
+
+//unsigned short* DMACONR1_KI = (unsigned short*)0xDFF002;  //<=- this should be DMA_CONR2    
+
+int current_audio_priorities[8] = { 0 }; // to hold priorities of the last/current sample being played.
+
+
+
+/*
+enum
+{
+    airstrik,
+    aoi,
+    ccthang,
+    fwp,
+    heavyg,
+    ind,
+    ind2,
+    J1,
+    jdi_v2,
+    justdoit,
+    linefire,
+    march,
+    nomercy,
+    otp,
+    prp,
+    radio,
+    rain,
+    stopthem,
+    target,
+    trouble,
+    unknown1,
+    unknown2,
+    warfare,
+    KI_NUM_MUSIC_TRACK
+}*/
+
+//#define KI_NUM_MUSIC_TRACK 23
+
+char* music_names[KI_NUM_MUSIC_TRACK] =
+{
+"music/airstrik.raw",
+"music/aoi.raw"     ,
+"music/ccthang.raw" ,
+"music/fwp.raw"     ,
+"music/heavyg.raw"  ,
+"music/ind.raw"     ,
+"music/ind2.raw"    ,
+"music/j1.raw"      ,
+"music/jdi_v2.raw"  ,
+"music/justdoit.raw",
+"music/linefire.raw",
+"music/march.raw"   ,
+"music/nomercy.raw" ,
+"music/otp.raw"     ,
+"music/prp.raw"     ,
+"music/radio.raw"   ,
+"music/rain.raw"    ,
+"music/stopthem.raw",
+"music/target.raw"  ,
+"music/trouble.raw" ,
+"music/unknown1.raw",
+"music/unknown2.raw",
+"music/warfare.raw" ,
+};
+
+
+AUDIO_SAMPLE music_samples[KI_NUM_MUSIC_TRACK];
+
+typedef enum
+{
+    SCOMP_NONE = 0,     // No compression -- raw data.
+    SCOMP_WESTWOOD = 1, // Special sliding window delta compression.
+    SCOMP_SOS = 99      // SOS frame compression.
+} SCompressType;
+typedef enum
+{
+    SoundFormat_16Bit = 1, /*!<  16-bit PCM */
+    SoundFormat_8Bit = 0,  /*!<  8-bit PCM */
+    SoundFormat_PSG = 3,   /*!<  PSG (programmable sound generator?) */
+    SoundFormat_ADPCM = 2  /*!<  IMA ADPCM compressed audio  */
+} SoundFormat;
+
+enum
+{
+    AUD_CHUNK_MAGIC_ID = 0x0000DEAF,
+    VOLUME_MIN = 0,
+    VOLUME_MAX = 255,
+    PRIORITY_MIN = 0,
+    PRIORITY_MAX = 255,
+    MAX_SAMPLE_TRACKERS = 5, // C&C issue where sounds get cut off is because of the small number of trackers.
+    STREAM_BUFFER_COUNT = 16,
+    BUFFER_CHUNK_SIZE = 4096, // 256 * 32,
+    UNCOMP_BUFFER_SIZE = 2098,
+    BUFFER_TOTAL_BYTES = BUFFER_CHUNK_SIZE * 4, // 32 kb
+    TIMER_DELAY = 25,
+    TIMER_RESOLUTION = 1,
+    TIMER_TARGET_RESOLUTION = 10, // 10-millisecond target resolution
+    INVALID_AUDIO_HANDLE = -1,
+    INVALID_FILE_HANDLE = -1,
+    DECOMP_BUFFER_COUNT = 3,
+};
+
+class SoundTracker;
+
+
+void KI_Play_Sample_VOC(void const* sample, VocType voc, VolType volume, signed short pan_value);
+void KI_Play_Sample_VOX(void const* sample, VoxType vox, VolType volume, signed short pan_value);
+int get_free_audio_channel(int audio_type);
+void play_SAGA_audio(int channel, char* buffer, long length, VolType volume, short pan_value);
+int KI_Play_MUSIC(char* name, int volume);
+int load_sound(char* filename, int bitdepth, int frequency, AUDIO_SAMPLE* the_audio_sample, int multi_track);
+
+static const signed char ZapTabTwo[4] = { -2, -1, 0, 1 };
+
+static const signed char ZapTabFour[16] = { -9, -8, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 8 };
+
+#ifndef clamp
+static int clamp(int x, int low, int high)
+{
+    return ((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x));
+}
+#endif
+
+
+const static int aud_ws_step_table2[] = { -2, -1, 0, 1 };
+
+const static int aud_ws_step_table4[] =
+{
+    -9, -8, -6, -5, -4, -3, -2, -1,
+     0,  1,  2,  3,  4,  5,  6,  8
+};
+
+const static int aud_ima_index_adjust_table[8] = { -1, -1, -1, -1, 2, 4, 6, 8 };
+
+const static int aud_ima_step_table[89] =
+{
+    7,     8,     9,     10,    11,    12,     13,    14,    16,
+    17,    19,    21,    23,    25,    28,     31,    34,    37,
+    41,    45,    50,    55,    60,    66,     73,    80,    88,
+    97,    107,   118,   130,   143,   157,    173,   190,   209,
+    230,   253,   279,   307,   337,   371,    408,   449,   494,
+    544,   598,   658,   724,   796,   876,    963,   1060,  1166,
+    1282,  1411,  1552,  1707,  1878,  2066,   2272,  2499,  2749,
+    3024,  3327,  3660,  4026,  4428,  4871,   5358,  5894,  6484,
+    7132,  7845,  8630,  9493,  10442, 11487,  12635, 13899, 15289,
+    16818, 18500, 20350, 22385, 24623, 27086,  29794, 32767
+};
+extern char* KI_buffer16_VOC[VOC_COUNT];
+unsigned int KI_buffer16_length_VOC[VOC_COUNT] = { 0 }; // store the sample lengths, to make sure that the voc matches. It seems there are multiple voc indexes?
+
+extern char* KI_buffer16_VOX[VOX_COUNT];
+unsigned int KI_buffer16_length_VOX[VOX_COUNT] = { 0 }; // store the sample lengths, to make sure that the voc matches. It seems there are multiple voc indexes?
+
+extern char* KI_buffer16_MUSIC[THEME_COUNT];
+unsigned int KI_buffer16_MUSIC_length[THEME_COUNT] = { 0 }; // store the sample lengths, to make sure that the voc matches. It seems there are multiple voc indexes?
+
+extern  AUDIO_SAMPLE sound_samples_VOC[VOC_COUNT];
+extern  AUDIO_SAMPLE sound_samples_VOX[VOX_COUNT];
+
+extern unsigned char* raw_music_data;
+
+typedef struct
+{
+    uint16_t Rate;       // Playback rate (hertz).
+    int32_t Size;        // Size of data (bytes).
+    int32_t UncompSize;  // Size of data (bytes).
+    uint8_t Flags;       // Holds flags for info
+                         //  1: Is the sample stereo?
+                         //  2: Is the sample 16 bits?
+    uint8_t Compression; // What kind of compression for this sample?
+} KI_AUDHeaderType;
+
 
 /***************************************************************************
 **	Controls what special effects may occur on the sound effect.
@@ -347,8 +559,15 @@ int Sound_Effect(VocType voc, VolType volume, int variation, signed short pan_va
     **	If the sound data pointer is not null, then presume that it is valid.
     */
     if (ptr) {
-        return (
-            Play_Sample(ptr, Fixed_To_Cardinal(SoundEffectName[voc].Priority, (int)volume), (int)volume, pan_value));
+#ifdef AMIGA
+		if (Apollo_AMMXon) {
+            KI_Play_Sample_VOC(ptr, voc, volume, pan_value);
+            return 0;
+		} else
+#endif
+		{
+        	return (Play_Sample(ptr, Fixed_To_Cardinal(SoundEffectName[voc].Priority, (int)volume), (int)volume, pan_value));  
+		}
     }
     return (-1);
 }
@@ -521,11 +740,21 @@ void Speak_AI(void)
 
                 _makepath(name, NULL, NULL, Speech[SpeakQueue], ".AUD");
                 if (CCFileClass(name).Read(SpeechBuffer, SPEECH_BUFFER_SIZE)) {
-                    Play_Sample(SpeechBuffer, 254, Options.Volume);
+#ifdef AMIGA            
+				if (Apollo_AMMXon)
+                    KI_Play_Sample_VOX(SpeechBuffer, SpeakQueue, Options.Volume,0);
+                else 
+#endif
+                    Play_Sample(SpeechBuffer, 254, Options.Volume);                  
                 }
                 _last = SpeakQueue;
             } else {
-                Play_Sample(SpeechBuffer, 254, Options.Volume);
+#ifdef AMIGA
+				if (Apollo_AMMXon)
+					KI_Play_Sample_VOX(SpeechBuffer, SpeakQueue, Options.Volume,0);
+				else
+#endif
+                	Play_Sample(SpeechBuffer, 254, Options.Volume);
             }
             SpeakQueue = VOX_NONE;
         }
@@ -580,3 +809,801 @@ bool Is_Speaking(void)
     }
     return (false);
 }
+#ifdef AMIGA
+void KI_Play_Sample_VOC(void const* sample, VocType voc, VolType volume, signed short pan_value)
+{
+    //return;
+    int address;
+    KI_AUDHeaderType raw_header;
+
+    if (voc >= VOC_COUNT || voc < 0)
+        return;
+
+
+    memcpy(&raw_header, sample, sizeof(raw_header));
+    raw_header.Rate = le16toh(raw_header.Rate);
+
+    raw_header.Size = le32toh(raw_header.Size);
+    raw_header.UncompSize = le32toh(raw_header.UncompSize);
+
+    _SOS_COMPRESS_INFO sosinfo;
+
+    sosinfo.wChannels = (raw_header.Flags & 1) + 1;
+    sosinfo.wBitSize = raw_header.Flags & 2 ? 16 : 8;
+    sosinfo.dwCompSize = raw_header.Size;
+    sosinfo.dwUnCompSize = raw_header.Size * (sosinfo.wBitSize / 4);
+
+    // Change to 64 bit aligned samples...
+    if (sound_samples_VOC[voc].file_data == NULL)
+    {
+        KI_buffer16_length_VOC[voc] = raw_header.UncompSize; // store the size, for checking the sample later
+        sound_samples_VOC[voc].file_data = (unsigned char*)calloc(1, raw_header.UncompSize * 2 + 4); // add 4 bytes, for 64-bit alignmenty
+
+        if (sound_samples_VOC[voc].file_data == NULL)
+            return;
+
+        // align to 4 byte boundary...
+        address = (int)sound_samples_VOC[voc].file_data + 4;
+        address = address & ~4;
+        sound_samples_VOC[voc].data = (unsigned char*)address;
+
+        int loop = floor(raw_header.Size / 520);
+        //int remain = raw_header.UncompSize-(loop * 520);
+
+        for (int i = 0; i < (loop); i++)
+        {
+
+            sosinfo.lpSource = Add_Long_To_Pointer(sample, sizeof(raw_header) + (i + 1) * (8) + i * 512);
+            sosinfo.lpDest = Add_Long_To_Pointer(sound_samples_VOC[voc].data, (i * 2048));
+            sosCODECDecompressData(&sosinfo, 2048);
+        }
+
+        int remain = raw_header.Size - (loop * 520);
+        if (remain < 0 || remain>512)
+        {
+            //printf("AUDIO VOC SIZE ERROR: remain=%d\n;", remain);
+        }
+        else
+        {
+            sosinfo.lpSource = Add_Long_To_Pointer(sample, sizeof(raw_header) + (loop + 1) * (8) + loop * 512);
+            sosinfo.lpDest = Add_Long_To_Pointer(sound_samples_VOC[voc].data, (loop * 2048));
+            sosCODECDecompressData(&sosinfo, remain * 4);
+        }
+
+        // sample should be decoded into out AUDIO_SAMPLE data structure...
+        sound_samples_VOC[voc].bits = 16;
+        sound_samples_VOC[voc].frequency = 22050;
+        sound_samples_VOC[voc].length = KI_buffer16_length_VOC[voc];
+        sound_samples_VOC[voc].multi_track = 0;
+
+        //if (load_sound((char*)file_to_load, 16, 22050, (AUDIO_SAMPLE*)destination_audio_sample, 0) != 0)
+    }
+
+    int channel = get_free_audio_channel(VOC_TYPE_AUDIO);
+
+    //printf("Audio channel: %d\n", channel);
+    if (channel > 0)
+    {
+        play_SAGA_audio(channel, (char*)sound_samples_VOC[voc].data, KI_buffer16_length_VOC[voc], volume, pan_value);
+    }
+    else
+    {
+        //printf("Audio channel returned -1\n");
+    }
+
+
+}
+
+void KI_Play_Sample_VOX(void const* sample, VoxType vox, VolType volume, signed short pan_value)
+{
+    int address;
+    KI_AUDHeaderType raw_header;
+
+    if (vox >= VOX_COUNT || vox < 0)
+        return;
+
+    memcpy(&raw_header, sample, sizeof(raw_header));
+    raw_header.Rate = le16toh(raw_header.Rate);
+
+    raw_header.Size = le32toh(raw_header.Size);
+    raw_header.UncompSize = le32toh(raw_header.UncompSize);
+
+    _SOS_COMPRESS_INFO sosinfo;
+
+    sosinfo.wChannels = (raw_header.Flags & 1) + 1;
+    sosinfo.wBitSize = raw_header.Flags & 2 ? 16 : 8;
+    sosinfo.dwCompSize = raw_header.Size;
+    sosinfo.dwUnCompSize = raw_header.Size * (sosinfo.wBitSize / 4);
+
+    // Change to 64 bit aligned samples...
+    if (sound_samples_VOX[vox].file_data == NULL)
+    {
+        KI_buffer16_length_VOX[vox] = raw_header.UncompSize; // store the size, for checking the sample later
+        sound_samples_VOX[vox].file_data = (unsigned char*)calloc(1, raw_header.UncompSize * 2+4); // add 4 bytes, for 64-bit alignmenty
+
+        if (sound_samples_VOX[vox].file_data == NULL)
+            return;
+
+        // align to 4 byte boundary...
+        address = (int)sound_samples_VOX[vox].file_data + 4;
+        address = address & ~4;
+        sound_samples_VOX[vox].data = (unsigned char*)address;
+
+        int loop = floor(raw_header.Size / 520);
+        //int remain = raw_header.UncompSize-(loop * 520);
+
+        for (int i = 0; i < (loop); i++)
+        {
+
+            sosinfo.lpSource = Add_Long_To_Pointer(sample, sizeof(raw_header) + (i + 1) * (8) + i * 512);
+            sosinfo.lpDest = Add_Long_To_Pointer(sound_samples_VOX[vox].data, (i * 2048));
+            sosCODECDecompressData(&sosinfo, 2048);
+        }
+
+        int remain = raw_header.Size - (loop * 520);
+        if (remain < 0 || remain>512)
+        {
+            //printf("AUDIO VOX SIZE ERROR: remain=%d\n;", remain);
+        }
+        else
+        {
+            sosinfo.lpSource = Add_Long_To_Pointer(sample, sizeof(raw_header) + (loop + 1) * (8) + loop * 512);
+            sosinfo.lpDest = Add_Long_To_Pointer(sound_samples_VOX[vox].data, (loop * 2048));
+            sosCODECDecompressData(&sosinfo, remain * 4);
+        }
+
+        // sample should be decoded into out AUDIO_SAMPLE data structure...
+        sound_samples_VOX[vox].bits = 16;
+        sound_samples_VOX[vox].frequency = 22050;
+        sound_samples_VOX[vox].length = KI_buffer16_length_VOX[vox];
+        sound_samples_VOX[vox].multi_track = 0;
+
+        //if (load_sound((char*)file_to_load, 16, 22050, (AUDIO_SAMPLE*)destination_audio_sample, 0) != 0)
+    }
+    
+    int channel = get_free_audio_channel(VOX_TYPE_AUDIO);
+
+    //printf("Audio channel: %d\n", channel);
+    if (channel > 0)
+    {
+        //play_SAGA_audio(channel, KI_buffer16_VOX[vox], KI_buffer16_length_VOX[vox], volume, pan_value);
+        play_SAGA_audio(channel, (char *)sound_samples_VOX[vox].data, KI_buffer16_length_VOX[vox], volume, pan_value);
+    }
+    else
+    {
+        //printf("Audio channel returned -1\n");
+    }
+}
+
+
+int KI_Play_MUSIC(char* name, int volume)
+{
+    char temp_name[40];
+    int name_length;
+    static char last_name[40] = { "" };
+    static int last_track_found = 0;
+
+    if (signal_audio_thread_to_load == 1)
+    {
+        //printf(" - waiting loading - ");
+        return 0; // skip this loop if we are waiting for a sample to load...
+    }
+
+    if (signal_main_thread_that_audio_has_loaded == 1)
+    {
+        //printf("Playing AFTER thread loading %s...\n", file_to_load);
+        play_SAGA_audio(1, (char*)destination_audio_sample->data, destination_audio_sample->length, volume, 0);
+        signal_main_thread_that_audio_has_loaded = 0;
+        return 0; // all is good...
+    }
+
+    for (size_t i = 0; i < strlen(name); ++i) {
+        name[i]=tolower(name[i]);
+    }
+
+    // check to see if the song has changed...
+    if (strcmp(name, last_name) == 0)
+    {
+        // check to see if the song is still playing. If it isn't return value of 1 to say it has finished...
+
+        uint16_t the_CON = *DMACONR;
+        if ((the_CON & 0x2) > 0)
+        {
+            // set the volume value, in case it has been changed by the user
+            *AUD1VOL = volume << 8 | volume;
+            return 0; // same song, nothing to see here...
+        }
+
+        //printf("DMA finished\n");
+        // DMA finshed. Return 1
+        if (last_track_found == 0)
+            return 2;
+        else
+        return 1;
+        
+    }
+
+    // turn audio off...
+    *DMACON1 = DMAF_AUD1;
+    *INTENA1 = INTF_AUD1;
+
+    strcpy(last_name, name);
+
+    //printf("KI_Play_MUSIC() requested: %s\n", name);
+
+    name_length = strlen(name);
+    strcpy(temp_name, "music/");
+    strncat(temp_name, name, name_length - 4);
+    strcat(temp_name, ".raw");
+
+    int i;
+    while (i < KI_NUM_MUSIC_TRACK)
+    {
+        if(strcmp(temp_name, music_names[i])==0)
+        {
+            break;
+        }
+        i++;
+    }
+
+    if (i >= KI_NUM_MUSIC_TRACK)
+    {
+        //printf("Track not found in list.\n");
+        last_track_found = 0;
+        return - 1;
+    }
+
+    // force it for it for testing.
+    //strcpy(temp_name, "music/airstrik.raw");
+    //printf("KI_Play_MUSIC() target -> %s\n", temp_name);
+
+    // load up file, if it hasn't been loaded already...
+    if (music_samples[i].file_data == 0)
+    {
+        //printf("load_sound() %s\n", temp_name);
+
+        last_track_found = 1;
+
+        // Now, user the audio_thread to load up the data... use some flags to tell the thread that data is ready to load...
+        strcpy((char *)file_to_load, temp_name);
+        destination_audio_sample = &music_samples[i];
+        
+        // tell audio thread to load data...
+        signal_audio_thread_to_load = 1;
+
+        /*
+        if (load_sound(temp_name, 16, 22050, &music_samples[i], 0) != 0)
+        {
+            //printf("KI_Play_MUSIC() could not load -> %s\n", temp_name);
+            return - 1;
+        }*/
+        return 0;
+    }
+    else
+    {
+        last_track_found = 1;
+        //printf("Playing already loaded track %s[%d]...\n", temp_name, i);
+        play_SAGA_audio(1, (char*)music_samples[i].data, music_samples[i].length, volume, 0);
+    }
+    return 0;  // all is well....
+    
+    {
+        // called in theme.cpp. But not quite working right, due to OpenAL needing volume up to be playing, etc.
+        int fh = Open_File(name, 1);
+
+        if (fh == INVALID_FILE_HANDLE) {
+            //printf("Could not open file in KI_Pay_MUSIC\n");
+            return -1;
+        }
+
+        if (raw_music_data)
+            free(raw_music_data);
+
+        raw_music_data = malloc(File_Size(fh));
+        if (!raw_music_data)
+        {
+            Close_File(fh);
+            return 0;
+        }
+
+        Read_File(fh, raw_music_data, File_Size(fh));
+
+        Close_File(fh);
+
+        KI_AUDHeaderType raw_header;
+
+
+        memcpy(&raw_header, raw_music_data, sizeof(raw_header));
+        raw_header.Rate = le16toh(raw_header.Rate);
+
+        raw_header.Size = le32toh(raw_header.Size);
+        raw_header.UncompSize = le32toh(raw_header.UncompSize);
+
+        _SOS_COMPRESS_INFO sosinfo;
+
+        sosinfo.wChannels = (raw_header.Flags & 1) + 1;
+        sosinfo.wBitSize = raw_header.Flags & 2 ? 16 : 8;
+        sosinfo.dwCompSize = raw_header.Size;
+        sosinfo.dwUnCompSize = raw_header.Size * (sosinfo.wBitSize / 4);
+
+        // kludge into one music slot, for the moment.
+        int vox = 1;
+        if (KI_buffer16_MUSIC[vox])
+            free(KI_buffer16_MUSIC[vox]);
+
+        if (KI_buffer16_MUSIC[vox] == NULL)
+        {
+            KI_buffer16_MUSIC_length[vox] = raw_header.UncompSize; // store the size, for checking the sample later
+            KI_buffer16_MUSIC[vox] = (char*)calloc(1, raw_header.UncompSize * 2);
+            if (KI_buffer16_MUSIC[vox] == NULL)
+                return 0;
+
+            int loop = floor(raw_header.Size / 520);
+            //int remain = raw_header.UncompSize-(loop * 520);
+
+            for (int i = 0; i < (loop); i++)
+            {
+
+                sosinfo.lpSource = Add_Long_To_Pointer(raw_music_data, sizeof(raw_header) + (i + 1) * (8) + i * 512);
+                sosinfo.lpDest = Add_Long_To_Pointer(KI_buffer16_MUSIC[vox], (i * 2048));
+                sosCODECDecompressData(&sosinfo, 2048);
+            }
+
+            int remain = raw_header.Size - (loop * 520);
+            if (remain < 0 || remain>512)
+            {
+                //printf("AUDIO MUSIC SIZE ERROR: remain=%d\n;", remain);
+            }
+            else
+            {
+                sosinfo.lpSource = Add_Long_To_Pointer(raw_music_data, sizeof(raw_header) + (loop + 1) * (8) + loop * 512);
+                sosinfo.lpDest = Add_Long_To_Pointer(KI_buffer16_MUSIC[vox], (loop * 2048));
+                sosCODECDecompressData(&sosinfo, remain * 4);
+            }
+        }
+
+        play_SAGA_audio(1, KI_buffer16_MUSIC[vox], KI_buffer16_MUSIC_length[vox], 255, 0);
+
+
+        //long Read_File(int handle, void* buf, unsigned long bytes)
+
+
+
+        //_makepath(name, NULL, NULL, SoundEffectName[voc].Name, ext);
+        //void const* ptr = MFCD::Retrieve(name);
+
+        /*
+        **	If the sound data pointer is not null, then presume that it is valid.
+        */
+        //if (ptr) {
+        //    KI_Play_Sample_VOC(ptr, voc, volume, pan_value);
+    }
+
+
+}
+
+int get_free_audio_channel(int audio_type)
+{
+    static int last_channel = 2;
+    int first_channel_of_lowest_priority = -1; // this is so we can force a low priority vox onto a channel.
+    int lowest_priority_found = 255;
+
+    if (USE_DMA_FOR_SAMPLE_FINISH)
+    {
+        int channels_checked = 0;
+        uint16_t the_CON;;
+        int curr_audio_pri;
+
+        if (audio_type == VOC_TYPE_AUDIO)
+            curr_audio_pri = 100;
+        else
+            curr_audio_pri = 1;
+
+        // look for a free channel, starting with last_channel+1;
+        while (channels_checked < 6)
+        {
+            if (++last_channel > 7)
+                last_channel = 2; // JUST FOR TESTING. Use Arne only, as music is probably on Paula.
+
+            // get channel priority... currently just use voc/vox, but set up priority eventually.
+            if (current_audio_priorities[last_channel] < lowest_priority_found)
+            {
+                lowest_priority_found = current_audio_priorities[last_channel];
+                first_channel_of_lowest_priority = last_channel;
+            }
+
+
+            if (last_channel < 4)
+            {
+                the_CON = *DMACONR;
+                //printf(" last_chan %d, CON=%x (%x). ", last_channel, the_CON, (1 << last_channel));
+             
+                if ( (the_CON & (1 << last_channel)) == 0) // i.e., DMA==0 when finished playing
+                {
+                 //   printf("DMA1 found free %d\n", last_channel);
+                    current_audio_priorities[last_channel] = curr_audio_pri; 
+                    return last_channel;
+                }
+            }
+            else
+            {
+                the_CON = *DMACONR2;
+                //printf(" last_chan %d, CON2=%x", last_channel, the_CON);
+
+                if ( (the_CON & (1 << (last_channel-4))) == 0) // i.e., DMA==0 when finished playing
+                {
+                 //   printf("DMA2 found free %d\n", last_channel);
+
+                    current_audio_priorities[last_channel] = curr_audio_pri;
+                    return last_channel;
+                }
+            }
+
+            channels_checked++;
+        }
+
+        // if we get here, then all channels are full... let's return the one with the lowest priority, that was found first (oldest sample)
+        if (first_channel_of_lowest_priority >= 0)
+        {
+            
+            if (curr_audio_pri > current_audio_priorities[first_channel_of_lowest_priority])
+            {
+                current_audio_priorities[first_channel_of_lowest_priority] = curr_audio_pri; 
+                return first_channel_of_lowest_priority;
+            }
+            return -1;
+
+        }
+    }
+
+    // no channels free...
+    return -1;
+}
+
+
+void play_SAGA_audio(int channel, char* buffer, long length, VolType volume, short pan_value)
+{
+    int SAGA_volume= volume / 8; // 40 is pretty loud on V4. So let's divide 0xFF by 8
+
+    int vol_left;// = volume;
+    int vol_right;// = volume;
+    int modified_freq=22050;
+
+    if (channel != 1)
+    {
+        float multiplier;
+        
+        if (pan_value == 0)
+        {
+            multiplier = (float)KI_random(200) / 1000;
+            vol_left = (int)((0.7 - multiplier) * (float)SAGA_volume);
+            vol_right = (int)((0.7 + multiplier) * (float)SAGA_volume);
+        }
+        else
+        {
+            // we have an off-screen thing. Maybe we push it all to one channel?
+            if (pan_value < 0)
+            {
+                vol_left = SAGA_volume;;
+                vol_right = (int) 0.25* SAGA_volume;
+            }
+            else
+            {
+                vol_left = (int)0.25 * SAGA_volume;
+                vol_right = SAGA_volume;
+            }
+        }
+        modified_freq = 20500 + KI_random(3100);
+
+        //printf("L/R=%d/%d, multiplier=%f\n", vol_left, vol_right, multiplier);
+    }
+    else
+    {
+        //Is music, centre
+        vol_left= SAGA_volume;
+        vol_right = SAGA_volume;
+
+    }
+    //pan_value *= 0x8000;
+    //pan_value /= (MAP_CELL_W >> 2);
+    //pan_value = Bound(pan_value, -0x7FFF, 0x7FFF);
+
+
+    //channel = 7;
+    //printf("AUDIO: %d\n", channel);
+    switch (channel)
+    {
+    case 0:
+        *DMACON1 = DMAF_AUD0;
+        *INTENA1 = INTF_AUD0;
+        *AUD0MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+        *AUD0LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+        *AUD0LEN2 = (length >> 2) & 0xFFFF;
+        *AUD0LEN = (length >> 2) >> 16;
+        *AUD0PER = (unsigned long)(3546895 / 22050);
+        *AUD0VOL = vol_left << 8 | vol_right;
+        *DMACON1 = 0x8000 | DMAF_AUD0 ;// DMAF_SETCLR | DMAF_AUD0;
+        break;
+
+    case 1:
+        *DMACON1 = DMAF_AUD1;
+        *INTENA1 = INTF_AUD1;
+        *AUD1MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+        *AUD1LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+        *AUD1LEN2 = (length >> 2) & 0xFFFF;
+        *AUD1LEN = (length >> 2) >> 16;
+        *AUD1PER = (unsigned long)(3546895 / modified_freq);
+        *AUD1VOL = vol_left << 8 | vol_right;
+        *DMACON1 = 0x8000 | DMAF_AUD1;// DMAF_SETCLR | DMAF_AUD0;
+        break;
+    case 2:
+        *DMACON1 = DMAF_AUD2;
+        *INTENA1 = INTF_AUD2;
+        *AUD2MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+        *AUD2LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+        *AUD2LEN2 = (length >> 2) & 0xFFFF;
+        *AUD2LEN = (length >> 2) >> 16;
+        *AUD2PER = (unsigned long)(3546895 / modified_freq);
+        *AUD2VOL = vol_left << 8 | vol_right;
+        *DMACON1 = 0x8000 | DMAF_AUD2;// DMAF_SETCLR | DMAF_AUD0;
+        break;
+    case 3:
+       * DMACON1 = DMAF_AUD3;
+        *INTENA1 = INTF_AUD3;
+        *AUD3MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+        *AUD3LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+        *AUD3LEN2 = (length >> 2) & 0xFFFF;
+        *AUD3LEN = (length >> 2) >> 16;
+        *AUD3PER = (unsigned long)(3546895 / modified_freq);
+        *AUD3VOL = vol_left << 8 | vol_right;
+        *DMACON1 = 0x8000 | DMAF_AUD3;// DMAF_SETCLR | DMAF_AUD0;
+        break;
+    case 4:
+        *DMACON2 = DMAF_AUD0;
+        *INTENA2 = INTF_AUD0;
+        *AUD4MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+        *AUD4LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+        *AUD4LEN2 = (length >> 2) & 0xFFFF;
+        *AUD4LEN = (length >> 2) >> 16;
+        *AUD4PER = (unsigned long)(3546895 / modified_freq);
+        *AUD4VOL = vol_left << 8 | vol_right;
+        *DMACON2 = 0x8000 | DMAF_AUD0;// DMAF_SETCLR | DMAF_AUD0;
+        break;
+
+    case 5:
+        *DMACON2 = DMAF_AUD1;
+        *INTENA2 = INTF_AUD1;
+        *AUD5MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+        *AUD5LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+        *AUD5LEN2 = (length >> 2) & 0xFFFF;
+        *AUD5LEN = (length >> 2) >> 16;
+        *AUD5PER = (unsigned long)(3546895 / modified_freq);
+        *AUD5VOL = vol_left << 8 | vol_right;
+        *DMACON2 = 0x8000 | DMAF_AUD1;// DMAF_SETCLR | DMAF_AUD0;
+        break;
+    case 6:
+        *DMACON2 = DMAF_AUD2;
+        *INTENA2 = INTF_AUD2;
+        *AUD6MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+        *AUD6LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+        *AUD6LEN2 = (length >> 2) & 0xFFFF;
+        *AUD6LEN = (length >> 2) >> 16;
+        *AUD6PER = (unsigned long)(3546895 / modified_freq);
+        *AUD6VOL = vol_left << 8 | vol_right;
+        *DMACON2 = 0x8000 | DMAF_AUD2;// DMAF_SETCLR | DMAF_AUD0;
+        break;
+    
+    case 7:
+        *DMACON2= DMAF_AUD3;
+        *INTENA2 = INTF_AUD3;// INTF_AUD3;
+        *AUD7MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+        *AUD7LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+        *AUD7LEN2 = (length >> 2) & 0xFFFF;
+        *AUD7LEN = (length >> 2) >> 16;
+        *AUD7PER = (unsigned long)(3546895 / modified_freq);
+        *AUD7VOL = vol_left << 8 | vol_right;
+        *DMACON2 = 0x8000 | DMAF_AUD3;// DMAF_SETCLR | DMAF_AUD0;
+
+        break;
+    }
+
+  /*
+    pan_value *= 0x8000;
+    pan_value /= (MAP_CELL_W >> 2);
+    pan_value = Bound(pan_value, -0x7FFF, 0x7FFF);*/
+
+
+    /*
+    *DMACON2 = 0x0008; // DMAF_AUD3; //disable DMA
+    *INTENA2 = (1 << 10);// INTF_AUD3;
+
+    *AUD7MODE = 1 | 1 << 1; // 8 bit (bit0=0), single shot (bit1=1)
+
+    *AUD7LCH = (unsigned long)buffer;// (unsigned long)dummy_buff;
+    *AUD7LEN2 = (length >> 2) & 0xFFFF;
+    *AUD7LEN = (length >> 2) >> 16;
+    *AUD7PER = (unsigned long)(3546895 / 22050);
+    *AUD7VOL = 40 << 8 | 40;
+    *DMACON2 = 0x8000 | 0x0008;// DMAF_SETCLR | DMAF_AUD3;
+    */
+}
+
+int load_sound(char* filename, int bitdepth, int frequency, AUDIO_SAMPLE* the_audio_sample, int multi_track)
+{
+    FILE* fp;
+    int address;
+    fp = fopen(filename, "r");
+
+    //printf("Loading sound: %s\n", filename);
+    // initialise samples...
+    the_audio_sample->data = 0;
+
+    if (fp)
+    {
+        fseek(fp, 0L, SEEK_END);
+        the_audio_sample->length = ftell(fp);
+        //the_audio_sample->file_data = (unsigned char*)AllocMem(the_audio_sample->length + 4, MEMF_FAST | MEMF_CLEAR);
+        the_audio_sample->file_data = (unsigned char*)malloc(the_audio_sample->length + 4);
+        //printf("filename: %s, address: %x\n", filename, the_audio_sample);
+        //the_audio_sample->data =(unsigned char*) malloc( the_audio_sample->length);
+
+
+        // align to 4 byte boundary...
+        address = (int)the_audio_sample->file_data + 4;
+        address = address & ~4;
+        the_audio_sample->data = (unsigned char*)address;
+
+        //printf("New audio sample mem: %x\n", address);
+
+        fseek(fp, 0L, SEEK_SET);
+        fread(the_audio_sample->data, the_audio_sample->length, 1, fp);
+        fclose(fp);
+
+        // swap endians, PC software used to write out 16-bit sample
+        int i;
+        unsigned char tempy;
+        for (i = 0; i < the_audio_sample->length / 2; i++)
+        {
+            tempy = *(the_audio_sample->data + i * 2);
+            *(the_audio_sample->data + i * 2) = *(the_audio_sample->data + i * 2 + 1);
+            *(the_audio_sample->data + i * 2 + 1) = tempy;
+        }
+    }
+    else
+    {
+        //printf("File error.\n");
+        return -1;
+    }
+
+    the_audio_sample->bits = bitdepth;
+    the_audio_sample->frequency = frequency;
+    the_audio_sample->multi_track = multi_track;
+    //printf(" the_audio_sample->multi_track=%d\n", the_audio_sample->multi_track);
+    return 0;
+}
+
+
+/*
+typedef enum VolType : unsigned char
+{
+    VOL_OFF = 0,
+    VOL_0 = VOL_OFF,
+    VOL_1 = 0x19,
+    VOL_2 = 0x32,
+    VOL_3 = 0x4C,
+    VOL_4 = 0x66,
+    VOL_5 = 0x80,
+    VOL_6 = 0x9A,
+    VOL_7 = 0xB4,
+    VOL_8 = 0xCC,
+    VOL_9 = 0xE6,
+    VOL_10 = 0xFF,
+    VOL_FULL = VOL_10
+} VolType;*/
+
+/*
+THEME_PICK_ANOTHER = -2,
+THEME_NONE = -1,
+THEME_AIRSTRIKE,
+THEME_80MX,
+THEME_CHRG,
+THEME_CREP,
+THEME_DRIL,
+THEME_DRON,
+THEME_FIST,
+THEME_RECON,
+THEME_VOICE,
+THEME_HEAVYG,
+THEME_J1,
+THEME_JDI_V2,
+THEME_RADIO,
+THEME_RAIN,
+THEME_AOI,      // Act On Instinct
+THEME_CCTHANG,  //	C&C Thang
+THEME_DIE,      //	Die!!
+THEME_FWP,      //	Fight, Win, Prevail
+THEME_IND,      //	Industrial
+THEME_IND2,     //	Industrial2
+THEME_JUSTDOIT, //	Just Do It!
+THEME_LINEFIRE, //	In The Line Of Fire
+THEME_MARCH,    //	March To Your Doom
+THEME_MECHMAN,  // Mechanical Man
+THEME_NOMERCY,  //	No Mercy
+THEME_OTP,      //	On The Prowl
+THEME_PRP,      //	Prepare For Battle
+THEME_ROUT,     //	Reaching Out
+THEME_HEART,    //
+THEME_STOPTHEM, //	Stop Them
+THEME_TROUBLE,  //	Looks Like Trouble
+THEME_WARFARE,  //	Warfare
+THEME_BFEARED,  //	Enemies To Be Feared
+THEME_IAM,      // I Am
+THEME_WIN1,     //	Great Shot!
+THEME_MAP1,     // Map subliminal techno "theme".
+THEME_VALKYRIE, // Ride of the valkyries.
+
+THEME_COUNT,
+THEME_LAST = THEME_BFEARED,
+THEME_FIRST = 0
+*/
+
+void* KI_audio_thread(void* ptr)
+{
+    // detach from the calling thread...
+    pthread_detach(pthread_self());
+    //printf("KI_audio_thread() started\n");
+
+    while (!quit_audio_thread) 
+    {
+        if (signal_audio_thread_to_load)
+        {
+            //printf("KI_audio_thread() loading file: %s\n", (char*)file_to_load);
+            if (load_sound((char *)file_to_load, 16, 22050, (AUDIO_SAMPLE *)destination_audio_sample, 0) != 0)
+            {
+                //printf("KI_Play_MUSIC() could not load -> %s\n", (char*)file_to_load);
+               // return -1;
+            }
+            signal_main_thread_that_audio_has_loaded = 1;
+            signal_audio_thread_to_load = 0;
+        }
+        else
+             usleep(50000);
+    }
+    //pthread_exit(NULL);
+    return NULL;
+}
+
+void KI_stop_all_audio()
+{
+    KI_Play_MUSIC(NULL, 0);
+
+    *DMACON1 = DMAF_AUD0;
+    *INTENA1 = INTF_AUD0;
+    *DMACON1 = DMAF_AUD1;
+    *INTENA1 = INTF_AUD1;
+    *DMACON1 = DMAF_AUD2;
+    *INTENA1 = INTF_AUD2;
+    *DMACON1 = DMAF_AUD3;
+    *INTENA1 = INTF_AUD3;
+    *DMACON2 = DMAF_AUD0;
+    *INTENA2 = INTF_AUD0;
+    *DMACON2 = DMAF_AUD1;
+    *INTENA2 = INTF_AUD1;
+    *DMACON2 = DMAF_AUD2;
+    *INTENA2 = INTF_AUD2;
+    *DMACON2 = DMAF_AUD3;
+    *INTENA2 = INTF_AUD3;
+}
+
+#else
+
+void KI_Play_Sample_VOC(void const* sample, VocType voc, VolType volume, signed short pan_value) {}
+void KI_Play_Sample_VOX(void const* sample, VoxType vox, VolType volume, signed short pan_value) {}
+int KI_Play_MUSIC(char* name, int volume) {return 0;}
+int get_free_audio_channel(int audio_type) {return 0;}
+void play_SAGA_audio(int channel, char* buffer, long length, VolType volume, short pan_value) {}
+int load_sound(char* filename, int bitdepth, int frequency, AUDIO_SAMPLE* the_audio_sample, int multi_track) {return 0;}
+void* KI_audio_thread(void* ptr){}
+void KI_stop_all_audio() {}
+
+#endif

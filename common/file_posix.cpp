@@ -92,7 +92,11 @@ bool Find_File_Data_Posix::FindFirst(const char* fname)
         Directory = opendir(DirName);
     } else {
         FileFilter = fname;
+#ifdef AMIGA   
+        Directory = opendir("");
+#else   
         Directory = opendir(".");
+#endif 
     }
 
     if (Directory == nullptr) {

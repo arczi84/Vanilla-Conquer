@@ -828,10 +828,16 @@ void RadarClass::Plot_Radar_Pixel(CELL cell)
                 **	Convert the logical icon number into the actual icon number.
                 */
                 Mem_Copy(Add_Long_To_Pointer((void*)ptr, 28), &offset, sizeof(offset));
+                #ifdef __BIG_ENDIAN__
+                offset = le32toh(offset);
+                #endif
                 Mem_Copy(Add_Long_To_Pointer((void*)ptr, offset + icon), &icon, sizeof(char));
                 icon &= 0x00FF;
 
                 Mem_Copy(Add_Long_To_Pointer((void*)ptr, 12), &offset, sizeof(offset));
+                 #ifdef __BIG_ENDIAN__
+                offset = le32toh(offset);
+                #endif
                 ptr = Add_Long_To_Pointer((void*)ptr, offset + icon * (24 * 24));
 
                 unsigned char* data = (unsigned char*)ptr;

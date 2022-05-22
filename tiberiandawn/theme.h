@@ -89,6 +89,7 @@ public:
     };
     int Still_Playing(void);
     ThemeType Next_Song(ThemeType index);
+    ThemeType Next_Song_KI(ThemeType index);
     bool Is_Allowed(ThemeType index) const;
     static void /*_pascal*/ Scan(void);
 };

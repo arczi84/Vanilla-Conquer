@@ -20,8 +20,9 @@
 #include "vqaconfig.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
-int VQA_Load_FINF(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_FINF(VQAHandle* handle, unsigned iffsize)
 {
     VQAData* data = handle->VQABuf;
 
@@ -36,7 +37,7 @@ int VQA_Load_FINF(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_CAP0(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_CAP0(VQAHandle* handle, unsigned iffsize)
 {
     VQAData* data = handle->VQABuf;
 
@@ -51,7 +52,7 @@ int VQA_Load_CAP0(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_CBF0(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_CBF0(VQAHandle* handle, unsigned iffsize)
 {
     VQALoader* loader = &handle->VQABuf->Loader;
     VQACBNode* curcb = (VQACBNode*)loader->CurCB;
@@ -70,7 +71,7 @@ int VQA_Load_CBF0(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_CBFZ(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_CBFZ(VQAHandle* handle, unsigned iffsize)
 {
     VQALoader* loader = &handle->VQABuf->Loader;
     VQACBNode* curcb = loader->CurCB;
@@ -90,7 +91,7 @@ int VQA_Load_CBFZ(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_CBP0(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_CBP0(VQAHandle* handle, unsigned iffsize)
 {
     VQALoader* loader = &handle->VQABuf->Loader;
     VQACBNode* curcb = (VQACBNode*)loader->CurCB;
@@ -115,7 +116,7 @@ int VQA_Load_CBP0(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_CBPZ(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_CBPZ(VQAHandle* handle, unsigned iffsize)
 {
     VQAData* data = handle->VQABuf;
     VQALoader* loader = &data->Loader;
@@ -145,7 +146,7 @@ int VQA_Load_CBPZ(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_CPL0(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_CPL0(VQAHandle* handle, unsigned iffsize)
 {
     VQAFrameNode* curframe = handle->VQABuf->Loader.CurFrame;
 
@@ -160,7 +161,7 @@ int VQA_Load_CPL0(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_CPLZ(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_CPLZ(VQAHandle* handle, unsigned iffsize)
 {
     VQAFrameNode* curframe = handle->VQABuf->Loader.CurFrame;
     unsigned lcwoffset = handle->VQABuf->MaxPalSize - ((iffsize + 1) & 0xFFFE);
@@ -176,7 +177,7 @@ int VQA_Load_CPLZ(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_VPT0(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_VPT0(VQAHandle* handle, unsigned iffsize)
 {
     VQAFrameNode* curframe = handle->VQABuf->Loader.CurFrame;
 
@@ -190,7 +191,7 @@ int VQA_Load_VPT0(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_VPTZ(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_VPTZ(VQAHandle* handle, unsigned iffsize)
 {
     VQAFrameNode* curframe = handle->VQABuf->Loader.CurFrame;
     unsigned lcwoffset = handle->VQABuf->MaxPtrSize - ((iffsize + 1) & (~1));
@@ -205,7 +206,7 @@ int VQA_Load_VPTZ(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_SND0(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_SND0(VQAHandle* handle, unsigned iffsize)
 {
     VQAConfig* config = &handle->Config;
     VQAData* data = handle->VQABuf;
@@ -242,7 +243,7 @@ int VQA_Load_SND0(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_SND1(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_SND1(VQAHandle* handle, unsigned iffsize)
 {
     VQASND1Header snd1hdr;
     VQAConfig* config = &handle->Config;
@@ -308,7 +309,7 @@ int VQA_Load_SND1(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_SND2(VQAHandle* handle, unsigned iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_SND2(VQAHandle* handle, unsigned iffsize)
 {
     VQAAudio* audio = &handle->VQABuf->Audio;
     VQAConfig* config = &handle->Config;
@@ -357,7 +358,7 @@ int VQA_Load_SND2(VQAHandle* handle, unsigned iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Load_VQF(VQAHandle* handle, unsigned frame_iffsize)
+int __attribute__((optimize("Ofast"))) VQA_Load_VQF(VQAHandle* handle, unsigned frame_iffsize)
 {
     unsigned bytes_loaded = 0;
     VQAData* data = handle->VQABuf;
@@ -515,7 +516,7 @@ int VQA_Load_VQF(VQAHandle* handle, unsigned frame_iffsize)
     return VQAERR_NONE;
 }
 
-int VQA_Open(VQAHandle* handle, const char* filename, VQAConfig* config)
+int __attribute__((optimize("Ofast"))) VQA_Open(VQAHandle* handle, const char* filename, VQAConfig* config)
 {
     VQAHeader* header = &handle->Header;
     VQAChunkHeader chunk;
@@ -747,7 +748,7 @@ void VQA_Close(VQAHandle* handle)
     memset(handle, 0, sizeof(VQAHandle));
 }
 
-int VQA_LoadFrame(VQAHandle* handle)
+int __attribute__((optimize("Ofast"))) VQA_LoadFrame(VQAHandle* handle)
 {
     unsigned iffsize;
     bool frame_loaded = false;
@@ -1095,7 +1096,7 @@ int VQA_LoadFrame(VQAHandle* handle)
     return VQAERR_NONE;
 }
 
-int VQA_SeekFrame(VQAHandle* handle, int framenum, int fromwhere)
+int __attribute__((optimize("Ofast"))) VQA_SeekFrame(VQAHandle* handle, int framenum, int fromwhere)
 {
     VQAErrorType rc = VQAERR_ERROR;
     VQAData* data = handle->VQABuf;
@@ -1168,7 +1169,7 @@ int VQA_SeekFrame(VQAHandle* handle, int framenum, int fromwhere)
     return rc;
 }
 
-VQAData* VQA_AllocBuffers(VQAHeader* header, VQAConfig* config)
+VQAData* __attribute__((optimize("Ofast"))) VQA_AllocBuffers(VQAHeader* header, VQAConfig* config)
 {
     VQACBNode* cbnode;
     VQAFrameNode* framenode;
@@ -1184,6 +1185,19 @@ VQAData* VQA_AllocBuffers(VQAHeader* header, VQAConfig* config)
     if (data == nullptr) {
         return nullptr;
     }
+
+    header->Frames = le16toh(header->Frames);
+    header->Flags = le16toh(header->Flags);
+    header->Version = le16toh(header->Version);
+    header->SampleRate = le16toh(header->SampleRate);
+    header->AltSampleRate = le16toh(header->AltSampleRate); //? 
+    header->ImageWidth = le16toh(header->ImageWidth);
+    header->ImageHeight = le16toh(header->ImageHeight);
+    header->Num1Colors = le16toh(header->Num1Colors);
+    header->CBentries = le16toh(header->CBentries);
+    header->Xpos = le16toh(header->Xpos); //?
+    header->Ypos = le16toh(header->Ypos); //?      
+    header->MaxFramesize = le16toh(header->MaxFramesize);
 
     memset(data, 0, sizeof(VQAData));
     data->MemUsed = sizeof(VQAData);

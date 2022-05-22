@@ -49,6 +49,12 @@
 #include "common/paths.h"
 #include <time.h>
 
+#include <SDL.h>
+bool start_counter = false;
+extern bool enable_triple;
+extern bool drawbox;
+extern SDL_Surface *back;
+
 /****************************************
 **	Function prototypes for this module **
 *****************************************/
@@ -304,7 +310,7 @@ bool Init_Game(int, char*[])
         sprintf(buffer, "Command & Conquer kann Ihren Maustreiber nicht finden..");
 #else
 #ifdef FRENCH
-        sprintf(buffer, "Command & Conquer ne peut pas d‚tecter votre gestionnaire de souris.");
+        sprintf(buffer, "Command & Conquer ne peut pas dâ€štecter votre gestionnaire de souris.");
 #else
         sprintf(buffer, "Command & Conquer is unable to detect your mouse driver.");
 #endif
@@ -319,7 +325,9 @@ bool Init_Game(int, char*[])
     **	most likely will, result in a visible prompt.
     */
 #ifndef REMASTER_BUILD
+#ifndef AMIGA
     Init_CDROM_Access();
+#endif
 #endif
 
 #ifndef DEMO
@@ -331,8 +339,7 @@ bool Init_Game(int, char*[])
     /*
     ** Need to search the search paths. ST - 3/15/2019 2:18PM
     */
-    char _path[] = {'.', PathsClass::SEP, '\0'};
-    const char* path = _path;
+    const char* path = ".\\";
     char search_path[_MAX_PATH];
     char scan_path[_MAX_PATH];
     Find_File_Data* ffd;
@@ -340,9 +347,8 @@ bool Init_Game(int, char*[])
 
     for (int p = 0; p < 100; p++) {
         strcpy(search_path, path);
-        if (search_path[strlen(search_path) - 1] != PathsClass::SEP) {
-            char sep[] = {PathsClass::SEP, '\0'};
-            strcat(search_path, sep);
+        if (search_path[strlen(search_path) - 1] != '\\') {
+            strcat(search_path, "\\");
         }
 
         strcpy(scan_path, search_path);
@@ -1177,7 +1183,7 @@ bool Select_Game(bool fade)
                 Force_CD_Available(-1);
                 Play_Intro(false);
                 Hide_Mouse();
-
+#ifndef AMIGA
                 // verify existance of movie file before playing this sequence.
                 if (CCFileClass("TRAILER.VQA").Is_Available()) {
                     Fade_Palette_To(BlackPalette, FADE_PALETTE_MEDIUM, Call_Back);
@@ -1248,6 +1254,7 @@ bool Select_Game(bool fade)
                 Fade_Palette_To(BlackPalette, FADE_PALETTE_MEDIUM, Call_Back);
 
                 Play_Movie("CC2TEASE");
+#endif                
                 Show_Mouse();
 
                 ScenarioInit++;
@@ -1477,6 +1484,7 @@ bool Select_Game(bool fade)
             Show_Mouse();
         }
     }
+    /*enable_triple =*/ drawbox = start_counter = 1;
 
     return (true);
 }
@@ -1499,8 +1507,11 @@ bool Select_Game(bool fade)
  * HISTORY:                                                                                    *
  *   06/06/1995 BRR : Created.                                                                 *
  *=============================================================================================*/
+bool logo_end = false;
+
 static void Play_Intro(bool for_real)
 {
+    logo_end = true;
 #ifdef REMASTER_BUILD
     return; // No game intro movies. - LLL
 #else
@@ -1696,20 +1707,20 @@ bool Parse_Command_Line(int argc, char* argv[])
                  "              (Syntax: DESTNETxx.xx.xx.xx)\r\n"
                  "  -SOCKET   = Kennung des Netzwerk-Sockets (0 - 16383)\n"
                  "  -STEALTH  = Namen im Mehrspieler-Modus verstecken (\"Boss-Modus\")\r\n"
-                 "  -MESSAGES = Mitteilungen von auáerhalb des Spiels zulassen\r\n"
+                 "  -MESSAGES = Mitteilungen von auÃ¡erhalb des Spiels zulassen\r\n"
                  //					"  -ELITE    = Fortgeschrittene KI und Gefechtstechniken.\r\n"
                  "\r\n");
 #else
 #ifdef FRENCH
             puts("Command & Conquer (c) 1995, Westwood Studios\r\n"
-                 "ParamŠtres:\r\n"
-                 //						"  -CD<chemin d'accŠs> = Recherche des fichiers dans le\r\n"
-                 //						"                        r‚pertoire indiqu‚.\r\n"
-                 "  -DESTNET  = Sp‚cifier le num‚ro de r‚seau du systŠme de destination\r\n"
+                 "ParamÅ tres:\r\n"
+                 //						"  -CD<chemin d'accÅ s> = Recherche des fichiers dans le\r\n"
+                 //						"                        râ€špertoire indiquâ€š.\r\n"
+                 "  -DESTNET  = Spâ€šcifier le numâ€šro de râ€šseau du systÅ me de destination\r\n"
                  "              (Syntaxe: DESTNETxx.xx.xx.xx)\r\n"
-                 "  -SOCKET   = ID poste r‚seau (0 … 16383)\r\n"
+                 "  -SOCKET   = ID poste râ€šseau (0 â€¦ 16383)\r\n"
                  "  -STEALTH  = Cacher les noms en mode multijoueurs (\"Mode Boss\")\r\n"
-                 "  -MESSAGES = Autorise les messages ext‚rieurs … ce jeu.\r\n"
+                 "  -MESSAGES = Autorise les messages extâ€šrieurs â€¦ ce jeu.\r\n"
                  "\r\n");
 #else
             puts("Command & Conquer (c) 1995, 1996 Westwood Studios\r\n"
@@ -2158,9 +2169,9 @@ void Parse_INI_File(void)
     /*
     ** These arrays store the coded version of the names Geologic, Period, & Jurassic.
     ** Decode them by subtracting 83.  For you curious types, the names look like:
-    ** š¸Â¿Âº¼¶
-    ** £¸Å¼Â·
-    ** ?ÈÅ´ÆÆ¼¶
+    ** Å¡Â¸Ã‚Â¿Ã‚ÂºÂ¼Â¶
+    ** Â£Â¸Ã…Â¼Ã‚Â·
+    ** ?ÃˆÃ…Â´Ã†Ã†Â¼Â¶
     ** If these INI entries aren't found, the IsJurassic flag does nothing.
     */
     static char coded_section[] = {154, 184, 194, 191, 194, 186, 188, 182, 0};
@@ -2233,10 +2244,14 @@ void Parse_INI_File(void)
  * HISTORY:                                                                                    *
  *   03/24/1995 JLB : Created.                                                                 *
  *=============================================================================================*/
+#define VERSION "1.0"
+
+const char version[] = "\0$VER:vanillatd "VERSION"\0";
+
 int Version_Number(void)
 {
     const char* demo_text = Is_Demo() ? "DEMO " : "";
-
+/*
     // Only print the git tag version number if it starts with 'v'
     if (*GitTag == '\0' || GitUncommittedChanges || *GitTag != 'v') {
         snprintf(VersionText,
@@ -2246,14 +2261,14 @@ int Version_Number(void)
                  GitRevision,
                  (GitUncommittedChanges ? "~" : ""),
                  GitShortSHA1);
-    } else {
+    } else */{
         snprintf(VersionText,
                  sizeof(VersionText),
                  "%s%s %s%s",
                  demo_text,
-                 GitTag,
-                 (GitUncommittedChanges ? "~" : ""),
-                 GitShortSHA1);
+                 /*GitTag*/"",
+                 "v" VERSION" ",
+                 /*GitShortSHA1*/"");
     }
 
     return (1);

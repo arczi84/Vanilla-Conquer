@@ -82,7 +82,7 @@ ScrollClass::ScrollClass(void)
  *   08/25/1995 JLB : Handles new scrolling option.                                            *
  *=============================================================================================*/
 #define EVA_WIDTH 80
-void ScrollClass::AI(KeyNumType& input, int x, int y)
+void __attribute__((optimize("Ofast"))) ScrollClass::AI(KeyNumType& input, int x, int y)
 {
 #ifndef REMASTER_BUILD
     static DirType direction;
@@ -167,7 +167,7 @@ void ScrollClass::AI(KeyNumType& input, int x, int y)
                 //			if (Keyboard->Down(KN_LMOUSE)) {
                 //				rate = Bound(rate-3, 0, 4);
                 //			}
-                if (Keyboard->Down(KN_RMOUSE)) {
+                if (!Keyboard->Down(KN_RMOUSE)) { //arczi
                     rate = Bound(rate + 1, 4, (int)(sizeof(_rate) / sizeof(_rate[0])) - 1);
                 }
 

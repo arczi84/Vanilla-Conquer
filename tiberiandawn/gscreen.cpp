@@ -48,6 +48,21 @@
 
 #include "common/filepcx.h"
 
+#ifdef AMIGA
+#include <chrono>
+#include "mssleep.h"
+#include "SDL.h"
+
+
+#define CUSTOM_REGBASE          0xdff000
+#define CUSTOM_DMACON           (CUSTOM_REGBASE + 0x096)
+#define CUSTOM_DMACON2          (CUSTOM_DMACON  + 0x200)
+unsigned short* DMACON2_KI = (unsigned short*)CUSTOM_DMACON2;
+unsigned short* DMACONR1_KI = (unsigned short*)0xDFF002;  //<=- this should be DMA_CONR2    
+unsigned short* DMACONR2_KI = (unsigned short*)0xDFF202;  //<=- this should be DMA_CONR2    
+
+#endif
+
 GadgetClass* GScreenClass::Buttons = 0;
 
 GraphicBufferClass* GScreenClass::ShadowPage = 0;
@@ -475,8 +490,76 @@ extern bool CanVblankSync;
  *   02/14/1994 JLB : Created.                                                                 *
  *   05/01/1994 JLB : Converted to member function.                                            *
  *=============================================================================================*/
+float fps;
+bool ShowFPS = false;
+
+#ifdef AMIGA
+    static char KI_fps[200]="<>";
+    static char KI_fps2[200] = "<>";
+    //static float fps;
+    static int frame_counter = 0;
+#endif
+
 void GScreenClass::Blit_Display(void)
 {
+#ifdef AMIGA
+    static unsigned int time_frame_start1, time_frame_end, render_time;
+
+    if(frame_counter==0)
+        time_frame_start1 = SDL_GetTicks();
+    if (frame_counter == 60)
+    {
+        time_frame_end = SDL_GetTicks();
+
+        render_time = time_frame_end - time_frame_start1;
+
+        fps = 1000.0 / ((float)render_time / 60.0);
+        frame_counter = 0;
+        //sprintf(KI_fps, "%ld %.2f", render_time, fps);
+
+        if(fps<10)
+            sprintf(KI_fps, "00%05.1f  \n ",fps);
+        else if (fps<100)
+            sprintf(KI_fps, "0%05.1f   \n ", fps);
+        else
+            sprintf(KI_fps, "%05.1f    \n ", fps);
+    }
+    else
+        frame_counter++;
+
+    //HidPage.Print(KI_fps, 110, 3, YELLOW, BLACK);
+    if (ShowFPS)
+    	Simple_Text_Print(KI_fps, 110, 2, YELLOW, BLACK, TPF_8POINT);
+    //else
+     	//Simple_Text_Print(KI_fps, 110, 2, BLACK, BLACK, TPF_8POINT);   
+
+#if 0
+    // show DMACON
+    uint16_t the_CON = *DMACONR2_KI;
+
+    int dma_audio_vals[4];
+
+    dma_audio_vals[0] = the_CON & 0x1;
+    dma_audio_vals[1] = the_CON & 0x2;
+    dma_audio_vals[2] = the_CON & 0x4;
+    dma_audio_vals[3] = the_CON & 0x8;
+
+    //sprintf(KI_fps2, "DMA2: %d%d%d%d \n ", dma_audio_vals[0], dma_audio_vals[1]/2, dma_audio_vals[2]/4, dma_audio_vals[3]/8);
+    //Simple_Text_Print(KI_fps2, 110, 30, YELLOW, BLACK, TPF_8POINT);
+
+    the_CON = *DMACONR1_KI;
+
+    dma_audio_vals[0] = the_CON & 0x1;
+    dma_audio_vals[1] = the_CON & 0x2;
+    dma_audio_vals[2] = the_CON & 0x4;
+    dma_audio_vals[3] = the_CON & 0x8;
+
+    //sprintf(KI_fps2, "DMA1: %d%d%d%d \n ", dma_audio_vals[0], dma_audio_vals[1]/2, dma_audio_vals[2]/4, dma_audio_vals[3]/8);
+    //Simple_Text_Print(KI_fps2, 110, 20, YELLOW, BLACK, TPF_8POINT);
+#endif
+#endif
+
+
 #if (0)
     if (HidPage.Get_IsDirectDraw() && (Options.GameSpeed > 1 || Options.ScrollRate == 6 && CanVblankSync)) {
         WWMouse->Draw_Mouse(&HidPage);

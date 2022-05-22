@@ -56,7 +56,10 @@
 #include "miscasm.h"
 #include <string.h>
 #include <cmath>
-#ifdef SDL2_BUILD
+
+#define SDL_BUILD
+
+#ifdef SDL_BUILD
 #include <SDL.h>
 #include "sdl_keymap.h"
 #endif
@@ -64,6 +67,7 @@
 
 #define ARRAY_SIZE(x) int(sizeof(x) / sizeof(x[0]))
 
+bool enable_triple = false;
 /*
 **  Focus handlers for both games.
 */
@@ -316,7 +320,7 @@ KeyASCIIType WWKeyboardClass::To_ASCII(unsigned short key)
     int result = 1;
     int scancode = 0;
 
-#if defined(SDL2_BUILD)
+#if defined(SDL_BUILD)
     key &= 0xFF; // drop all mods
 
     if (key > ARRAY_SIZE(sdl_keymap) / 2 - 1) {
@@ -531,27 +535,57 @@ bool WWKeyboardClass::Is_Buffer_Empty(void) const
  *   09/30/1996 JLB : Created.                                                                 *
  *=============================================================================================*/
 void Process_Network();
+extern bool GameActive;
+extern void KI_stop_all_audio();
+extern void Prog_End(const char* why, bool fatal);
+extern int ReadyToQuit;
+extern bool ShowFPS;
+bool stop_infantry = false;
 
 void WWKeyboardClass::Fill_Buffer_From_System(void)
 {
-#ifdef SDL2_BUILD
+#ifdef SDL_BUILD
     Process_Network();
     SDL_Event event;
 
     while (!Is_Buffer_Full() && SDL_PollEvent(&event)) {
         unsigned short key;
         switch (event.type) {
+#ifdef SDL2_BUILD		
         case SDL_MOUSEWHEEL:
             if (event.wheel.y > 0) { // scroll up
                 Put_Key_Message(VK_MOUSEWHEEL_UP, false);
             } else if (event.wheel.y < 0) { // scroll down
                 Put_Key_Message(VK_MOUSEWHEEL_DOWN, false);
             }
-            break;
-        case SDL_QUIT:
-            exit(0);
-            break;
+            break;	
+#endif
         case SDL_KEYDOWN:
+            switch ( event.key.keysym.sym ) 
+            {
+            case SDLK_q: 
+                ReadyToQuit = 1;
+                //exit(0);
+                break;
+            case SDLK_F3:  
+                enable_triple = !enable_triple;
+                break; 
+            case SDLK_F4:
+                if (Settings.Video.FrameLimit > 0)
+                    Settings.Video.FrameLimit = 0;
+                else
+                    Settings.Video.FrameLimit = 30;
+                break;  
+            case SDLK_F5:  
+                ShowFPS = !ShowFPS;
+                break; 
+            case SDLK_F6:  
+                stop_infantry = !stop_infantry;;
+                break; 
+            }
+#ifdef SDL1_BUILD      
+            event.key.keysym.scancode = keycode_to_scancode[event.key.keysym.sym];
+#endif
             Put_Key_Message(event.key.keysym.scancode, false);
             break;
         case SDL_KEYUP:
@@ -560,7 +594,7 @@ void WWKeyboardClass::Fill_Buffer_From_System(void)
             } else {
                 Put_Key_Message(event.key.keysym.scancode, true);
             }
-            break;
+            break; 			
         case SDL_MOUSEMOTION:
             Move_Video_Mouse(static_cast<float>(event.motion.xrel), static_cast<float>(event.motion.yrel));
             break;
@@ -581,7 +615,12 @@ void WWKeyboardClass::Fill_Buffer_From_System(void)
                 break;
             }
 
-            if (Settings.Mouse.RawInput || Is_Gamepad_Active()) {
+            if (Settings.Mouse.RawInput
+#ifdef SDL2_BUILD	
+			|| Is_Gamepad_Active()
+#endif
+			)
+			{
                 Get_Video_Mouse(x, y);
             } else {
                 float scale_x = 1.0f, scale_y = 1.0f;
@@ -592,6 +631,7 @@ void WWKeyboardClass::Fill_Buffer_From_System(void)
 
             Put_Mouse_Message(key, x, y, event.type == SDL_MOUSEBUTTONDOWN ? false : true);
         } break;
+#ifdef SDL2_BUILD		
         case SDL_WINDOWEVENT:
             switch (event.window.event) {
             case SDL_WINDOWEVENT_EXPOSED:
@@ -627,11 +667,14 @@ void WWKeyboardClass::Fill_Buffer_From_System(void)
         case SDL_CONTROLLERBUTTONUP:
             Handle_Controller_Button_Event(event.cbutton);
             break;
+#endif	
         }
     }
+#ifdef SDL2_BUILD	
     if (Is_Gamepad_Active()) {
         Process_Controller_Axis_Motion();
     }
+#endif
 #elif defined(_WIN32)
     if (!Is_Buffer_Full()) {
         MSG msg;
@@ -888,7 +931,7 @@ void WWKeyboardClass::Clear(void)
  * HISTORY:                                                                                    *
  *   09/30/1996 JLB : Created.                                                                 *
  *=============================================================================================*/
-#if defined(_WIN32) && !defined(SDL2_BUILD)
+#if defined(_WIN32) && !defined(SDL_BUILD)
 bool WWKeyboardClass::Message_Handler(HWND window, UINT message, UINT wParam, LONG lParam)
 {
 // ST - 5/13/2019

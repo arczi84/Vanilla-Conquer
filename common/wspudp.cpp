@@ -52,11 +52,13 @@ extern WWKeyboardClass* Keyboard;
 #include <stdio.h>
 #include <assert.h>
 
+#ifdef NETWORKING
+
 #ifndef _WIN32
 #include <ifaddrs.h>
 #endif
 
-#ifdef NETWORKING
+
 
 /***********************************************************************************************
  * UDPInterfaceClass::UDPInterfaceClass -- Class constructor.                                  *

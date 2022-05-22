@@ -410,7 +410,7 @@ void GameControlsClass::Process(void)
             int old = Options.GameSpeed; // save orig value
             Options.GameSpeed = gamespeed;
             Options.Save_Settings(); // save new value
-            Options.GameSpeed = old; // restore old value
+           // Options.GameSpeed = old; // restore old value  // arczi but why?
 
             /*
             **	Possibly launch into another dialog if so directed.

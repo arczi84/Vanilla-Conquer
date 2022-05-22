@@ -99,6 +99,7 @@ set(COMMON_SRC
     xordelta.cpp
     xpipe.cpp
     xstraw.cpp
+    timer_amiga.cpp
 )
 
 if (WIN32)
@@ -151,8 +152,8 @@ endif()
 if(DDRAW)
     list(APPEND COMMONV_SRC video_ddraw.cpp)
     list(APPEND VANILLA_LIBS ddraw)
-elseif(SDL2)
-    list(APPEND COMMONV_SRC video_sdl2.cpp)
+elseif(SDL1 OR SDL2)
+    list(APPEND COMMONV_SRC video_sdl.cpp)
 else()
     list(APPEND COMMONV_SRC video_null.cpp)
 endif()

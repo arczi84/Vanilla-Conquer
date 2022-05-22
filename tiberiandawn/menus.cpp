@@ -36,6 +36,8 @@
 #include "function.h"
 #include "common/framelimit.h"
 
+bool drawbox = true;
+
 /*****************************
 **	Function prototypes
 ******************************/
@@ -799,9 +801,11 @@ int Main_Menu(unsigned long timeout)
             /*
             **	Load the background picture.
             */
+            TitlePicture = strdup("screen1.pcx");
             Load_Title_Screen(TitlePicture, &HidPage, Palette);
             Blit_Hid_Page_To_Seen_Buff();
-
+            back = NULL;
+            drawbox = false;
             /*
             **	Display the title and text overlay for the menu.
             */
@@ -857,6 +861,10 @@ int Main_Menu(unsigned long timeout)
 
         case (BUTTON_START | KN_BUTTON):
             retval = (input & 0x7FFF) - BUTTON_EXPAND;
+            Load_Title_Screen("ScreenStart.pcx", &HidPage, Palette);
+            TitlePicture = strdup("ScreenStart.pcx");
+            Blit_Hid_Page_To_Seen_Buff();   
+            drawbox = true;
             process = false;
             break;
 
@@ -872,6 +880,9 @@ int Main_Menu(unsigned long timeout)
 #ifdef DEMO
             retval += 1;
 #endif // DEMO
+            TitlePicture = strdup("ScreenLoad.pcx");
+            //drawbox = false;
+            Blit_Hid_Page_To_Seen_Buff();
             process = false;
             break;
 
@@ -880,6 +891,8 @@ int Main_Menu(unsigned long timeout)
 #ifdef DEMO
             retval += 1;
 #endif // DEMO
+            TitlePicture = strdup("ScreenMulti.pcx");
+            Blit_Hid_Page_To_Seen_Buff();  
             process = false;
             break;
 

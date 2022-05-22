@@ -199,6 +199,9 @@ bool SuperClass::Recharge(bool player)
             Control = RechargeTime;
         }
 #else
+#ifdef AMIGA //Otherwise it's always 0
+        RechargeTime = ION_CANNON_GONE_TIME;
+#endif  
         Control = RechargeTime;
 #endif
         if (player && VoxCharging != VOX_NONE) {

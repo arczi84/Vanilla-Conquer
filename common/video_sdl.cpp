@@ -47,9 +47,90 @@
 
 #include <SDL.h>
 
+#ifndef SDL2_BUILD
+
+#include "video_sdl1.h"
+
+
+#ifdef AMIGA
+extern "C" 
+{
+extern unsigned char Apollo_AMMXon;
 extern WWKeyboardClass* Keyboard;
+
+#include <exec/types.h>
+#include <exec/memory.h>
+#include <dos/dos.h>
+#include <hardware/custom.h>
+#include <hardware/intbits.h>
+#include <clib/exec_protos.h>
+#include <proto/graphics.h>
+
+#define GAME_SCREEN_WIDTH         (640)
+#define GAME_SCREEN_HEIGHT        (400)
+#define GAME_memsize              (GAME_SCREEN_WIDTH * GAME_SCREEN_HEIGHT * 2) + 128
+#define GAME_SCREEN_DEPTH         (16)
+
+#define SAGA_VIDEO_PLANEPTR       (0xDFF1EC)
+
+static int curr_buffer = 0;
+
+ULONG *x_MemAddr1;
+ULONG *x_MemAddr2;
+ULONG *x_MemAddr3;
+ULONG *x_MemAddr0;
+
+ULONG *x_FBAddr1;
+ULONG *x_FBAddr2;
+ULONG *x_FBAddr3;
+ULONG *x_FBAddr0;
+
+ULONG *x_Pixels  = NULL;
+
+}
+#else
+unsigned char Apollo_AMMXon = 0;
+#endif
+
+extern bool enable_triple;
+static SDL_Surface *logo;
+extern SDL_Surface *back;
+extern  float fps;
+
+void InitBuffers(void)
+{
+#ifdef AMIGA
+	// Aligned Drawing Buffers 1,2,3 */
+	x_MemAddr1 = (ULONG*)AllocMem(GAME_memsize, MEMF_LOCAL | MEMF_FAST | MEMF_CLEAR);
+	x_FBAddr1 = (ULONG*)((((ULONG)x_MemAddr1) + 31)& ~31);
+
+	x_MemAddr2 = (ULONG*)AllocMem(GAME_memsize, MEMF_LOCAL | MEMF_FAST | MEMF_CLEAR);
+	x_FBAddr2 = (ULONG*)((((ULONG)x_MemAddr2) + 31)& ~31);
+
+	x_MemAddr3 = (ULONG*)AllocMem(GAME_memsize, MEMF_LOCAL | MEMF_FAST | MEMF_CLEAR);
+	x_FBAddr3 = (ULONG*)((((ULONG)x_MemAddr3) + 31)& ~31);
+
+    x_MemAddr0 = (ULONG*)AllocMem(GAME_memsize, MEMF_LOCAL | MEMF_FAST | MEMF_CLEAR);
+	x_FBAddr0 = (ULONG*)((((ULONG)x_MemAddr0) + 31)& ~31);
+#endif
+} 
+
+void FreeBuffers(void)
+{
+#ifdef AMIGA
+    FreeMem(x_MemAddr1, GAME_memsize);
+    FreeMem(x_MemAddr2, GAME_memsize);
+    FreeMem(x_MemAddr3, GAME_memsize);
+    FreeMem(x_MemAddr0, GAME_memsize);
+#endif
+}
+
+static SDL_Surface* window;
+static SDL_Surface* windowSurface;
+#else
 static SDL_Window* window;
 static SDL_Renderer* renderer;
+#endif
 static SDL_Palette* palette;
 static Uint32 pixel_format;
 static SDL_Rect render_dst;
@@ -74,6 +155,7 @@ static struct
 } hwcursor;
 
 #define ARRAY_SIZE(x) int(sizeof(x) / sizeof(x[0]))
+#ifdef SDL2_BUILD
 #define MAKEFORMAT(f)                                                                                                  \
     {                                                                                                                  \
         SDL_PIXELFORMAT_##f, #f                                                                                        \
@@ -116,16 +198,24 @@ Uint32 SettingsPixelFormat()
 
     return SDL_PIXELFORMAT_UNKNOWN;
 }
-
+#endif
 static void Update_HWCursor();
 
 static void Update_HWCursor_Settings()
 {
+#ifdef AMIGA
+    return;
+#endif
     /*
     ** Update mouse scaling settings.
     */
     int win_w, win_h;
+#ifdef SDL2_BUILD
     SDL_GetRendererOutputSize(renderer, &win_w, &win_h);
+#else
+    win_w = Settings.Video.Width;
+    win_h = Settings.Video.Height;
+#endif
     hwcursor.ScaleX = win_w / (float)hwcursor.GameW;
     hwcursor.ScaleY = win_h / (float)hwcursor.GameH;
 
@@ -196,16 +286,86 @@ SurfaceMonitorClass& AllSurfaces = AllSurfacesDummy; // List of all direct draw 
  * HISTORY:                                                                                    *
  *   09/26/1995 PWG : Created.                                                                 *
  *=============================================================================================*/
+#include <iostream>
+#include <pthread.h>
+#include <unistd.h>
+#include <winstub.h>
+
+#ifdef AMIGA
+
+extern bool logo_end;
+extern unsigned char* BlackPalette;
+extern void * threadFunc(void * arg);
+
+void * threadFunc(void * arg)
+{
+	pthread_detach(pthread_self());
+    char *file[] = {"screen1-8bit.bmp","screen2-8bit.bmp","screen3-8bit.bmp"};
+    SDL_Surface* black = SDL_CreateRGBSurface(0, 640, 400, 2, 0, 0, 0, 0);
+    SDL_Flip(SDL_GetVideoSurface());
+    for (int i = 0; i < 3 ; i++)
+    {
+        if (logo_end)
+           break;
+        logo = SDL_LoadBMP( file[i] );
+
+        SDL_BlitSurface( logo, NULL, window, NULL );
+        SDL_Flip(window);
+       
+        if ((!logo_end) && (i < 2))
+            sleep(8);
+        else {
+            while (!logo_end)
+                sleep(1);
+            }
+    }
+
+    if (Apollo_AMMXon) {
+        if (logo) {
+            SDL_BlitSurface( black, NULL, window, NULL );
+            SDL_Flip(window);
+            *(volatile ULONG*)SAGA_VIDEO_PLANEPTR = (ULONG) black->pixels;
+        }
+        //*(volatile unsigned short int*)0xDFF1F4 = (unsigned short int)0x0401;
+    }
+   
+    if (logo) {
+        SDL_FreeSurface(logo);
+        logo = nullptr;
+    }
+    if (black) {
+        SDL_FreeSurface(black);
+        black = nullptr;
+    }
+    pthread_exit(NULL);
+
+    return NULL;
+}
+#endif
 bool Set_Video_Mode(int w, int h, int bits_per_pixel)
 {
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+    SDL_Init(SDL_INIT_VIDEO/*|SDL_INIT_AUDIO*/);
+
+    if (Apollo_AMMXon) {
+        InitBuffers();
+    }
+
     SDL_ShowCursor(SDL_DISABLE);
 
     int win_w = w;
     int win_h = h;
     int win_flags = 0;
+#ifdef SDL2_BUILD
     Uint32 requested_pixel_format = SettingsPixelFormat();
+#else
 
+//#ifdef AMIGA
+	bits_per_pixel = 16;
+//#endif
+    win_flags = SDL_HWSURFACE;
+
+
+#endif
     if (!Settings.Video.Windowed) {
         /*
         ** Native fullscreen if no proper width and height set.
@@ -227,6 +387,22 @@ bool Set_Video_Mode(int w, int h, int bits_per_pixel)
         Settings.Video.WindowHeight = win_h;
     }
 
+#ifndef SDL2_BUILD
+    const SDL_VideoInfo* video_info = SDL_GetVideoInfo();
+    window = SDL_SetVideoMode(win_w, win_h, bits_per_pixel, win_flags);
+#ifdef AMIGA
+    // Thread id
+    pthread_t threadId;
+    // Create a thread that will function threadFunc()
+    int err = pthread_create(&threadId, NULL, &threadFunc, NULL);
+    // Check if thread is created sucessfuly
+    if (err)
+    {
+        std::cout << "Thread creation failed : " << strerror(err);
+    }
+#endif
+    SDL_WM_SetCaption("Vanilla Conquer", NULL);
+#else
     window =
         SDL_CreateWindow("Vanilla Conquer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, win_w, win_h, win_flags);
     if (window == nullptr) {
@@ -320,7 +496,7 @@ bool Set_Video_Mode(int w, int h, int bits_per_pixel)
     } else {
         DBG_INFO("  scaler set to '%s'", Settings.Video.Scaler.c_str());
     }
-
+#endif
     if (palette == nullptr) {
         palette = SDL_AllocPalette(256);
     }
@@ -334,21 +510,13 @@ bool Set_Video_Mode(int w, int h, int bits_per_pixel)
     hwcursor.Y = h / 2;
     Update_HWCursor_Settings();
 
-    /*
-    ** Init gamepad.
-    */
-    if (Settings.Mouse.ControllerEnabled) {
-        SDL_Init(SDL_INIT_GAMECONTROLLER);
-        Keyboard->Open_Controller();
-    }
-
     return true;
 }
 
 void Toggle_Video_Fullscreen()
 {
     Settings.Video.Windowed = !Settings.Video.Windowed;
-
+#ifdef SDL2_BUILD
     if (!Settings.Video.Windowed) {
         if (Settings.Video.Width == 0 || Settings.Video.Height == 0) {
             SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -360,7 +528,7 @@ void Toggle_Video_Fullscreen()
         SDL_SetWindowFullscreen(window, 0);
         SDL_SetWindowSize(window, Settings.Video.WindowWidth, Settings.Video.WindowHeight);
     }
-
+#endif
     Update_HWCursor_Settings();
 }
 
@@ -376,11 +544,10 @@ void Set_Video_Cursor_Clip(bool clipped)
 
     if (window) {
         int relative;
-
+#ifdef SDL2_BUILD
         if (Settings.Video.Windowed) {
             SDL_SetWindowGrab(window, hwcursor.Clip ? SDL_TRUE : SDL_FALSE);
-            relative = SDL_SetRelativeMouseMode(
-                Settings.Mouse.ControllerEnabled || (Settings.Mouse.RawInput && hwcursor.Clip) ? SDL_TRUE : SDL_FALSE);
+            relative = SDL_SetRelativeMouseMode(Settings.Mouse.RawInput && hwcursor.Clip ? SDL_TRUE : SDL_FALSE);
 
             /*
             ** When grabbing with raw input, move in-game cursor where the real cursor was and vice versa.
@@ -399,9 +566,11 @@ void Set_Video_Cursor_Clip(bool clipped)
             SDL_SetWindowGrab(window, SDL_TRUE);
             relative = SDL_SetRelativeMouseMode(Settings.Mouse.RawInput ? SDL_TRUE : SDL_FALSE);
         }
-
+#else
+        relative = -1;
+#endif
         if (relative < 0) {
-            DBG_ERROR("Raw input not supported, disabling.");
+            //DBG_ERROR("Raw input not supported, disabling.");
             Settings.Mouse.RawInput = false;
         }
     }
@@ -409,7 +578,7 @@ void Set_Video_Cursor_Clip(bool clipped)
 
 void Move_Video_Mouse(float xrel, float yrel)
 {
-    if (Keyboard->Is_Gamepad_Active() || hwcursor.Clip || !Settings.Video.Windowed) {
+    if (hwcursor.Clip || !Settings.Video.Windowed) {
         hwcursor.X += xrel * (Settings.Mouse.Sensitivity / 100.0f);
         hwcursor.Y += yrel * (Settings.Mouse.Sensitivity / 100.0f);
     }
@@ -429,7 +598,7 @@ void Move_Video_Mouse(float xrel, float yrel)
 
 void Get_Video_Mouse(int& x, int& y)
 {
-    if (Keyboard->Is_Gamepad_Active() || (Settings.Mouse.RawInput && (hwcursor.Clip || !Settings.Video.Windowed))) {
+    if (Settings.Mouse.RawInput && (hwcursor.Clip || !Settings.Video.Windowed)) {
         x = hwcursor.X;
         y = hwcursor.Y;
     } else {
@@ -469,21 +638,31 @@ void Reset_Video_Mode(void)
         SDL_FreeSurface(hwcursor.Surface);
         hwcursor.Surface = nullptr;
     }
-
+#ifdef SDL2_BUILD
     SDL_DestroyRenderer(renderer);
     renderer = nullptr;
 
-    SDL_FreePalette(palette);
-    palette = nullptr;
-
     SDL_DestroyWindow(window);
     window = nullptr;
+#else
+    if (window) {
+        SDL_FreeSurface(window);
+        window = nullptr;
+    }
+#endif
+    if (palette) {
+        SDL_FreePalette(palette);
+        palette = nullptr;
+    }
 
-    Keyboard->Close_Controller();
+    FreeBuffers();
 }
 
 static void Update_HWCursor()
 {
+#ifdef AMIGA
+    return;
+#endif
     float scale_x = 1.0f;
     float scale_y = 1.0f;
     int scaled_w = hwcursor.W;
@@ -510,15 +689,21 @@ static void Update_HWCursor()
         /*
         ** Real HW cursor needs to be scaled up. Emulated can use original cursor data.
         */
+#ifdef SDL2_BUILD
         if (Settings.Video.HardwareCursor) {
             hwcursor.Surface = SDL_CreateRGBSurfaceWithFormat(0, scaled_w, scaled_h, 8, SDL_PIXELFORMAT_INDEX8);
-        } else {
+        } else
+#endif
+        {
             hwcursor.Surface =
-                SDL_CreateRGBSurfaceFrom(hwcursor.Raw, hwcursor.W, hwcursor.H, 8, hwcursor.W, 0, 0, 0, 0);
+                SDL_CreateRGBSurfaceFrom(hwcursor.Raw, hwcursor.W, hwcursor.H, 16, hwcursor.W, 0, 0, 0, 0);
         }
-
+#ifdef SDL2_BUILD
         SDL_SetSurfacePalette(hwcursor.Surface, palette);
         SDL_SetColorKey(hwcursor.Surface, SDL_TRUE, 0);
+#else
+        SDL_SetColorKey(hwcursor.Surface, SDL_SRCCOLORKEY, 0);
+#endif
     }
 
     /*
@@ -543,8 +728,10 @@ static void Update_HWCursor()
         /*
         ** Queue new cursor to be set during frame flip.
         */
+#ifdef SDL2_BUILD
         hwcursor.Pending =
             SDL_CreateColorCursor(hwcursor.Surface, hwcursor.HotX * hwcursor.ScaleX, hwcursor.HotY * hwcursor.ScaleY);
+#endif
     }
 }
 
@@ -635,21 +822,34 @@ void Set_DD_Palette(void* rpalette)
         colors[i].r = (unsigned char)rcolors[i * 3] << 2;
         colors[i].g = (unsigned char)rcolors[i * 3 + 1] << 2;
         colors[i].b = (unsigned char)rcolors[i * 3 + 2] << 2;
+#ifdef SDL2_BUILD
         colors[i].a = 0xFF;
+#endif
     }
 
     /*
     ** First color is transparent. This needs to be set so that hardware cursor has transparent
     ** surroundings when converting from 8-bit to 32-bit.
     */
+#ifdef SDL2_BUILD
     colors[0].a = 0;
-
-    SDL_SetPaletteColors(palette, colors, 0, 256);
+#endif
+    if (!Apollo_AMMXon)	
+        SDL_SetPaletteColors(palette, colors, 0, 256);
 
     /*
     ** Cursor needs to be updated when palette changes.
     */
     Update_HWCursor();
+    if (Apollo_AMMXon)	
+	{
+	    unsigned long col_data;
+	    for (int i = 0; i < 256; i++)
+	    {
+	        col_data = (i << 24) + (((unsigned char)rcolors[i * 3]) << 18) + (((unsigned char)rcolors[i * 3+1]) <<10) + (((unsigned char)rcolors[i * 3+2])<<2);
+	        *(volatile unsigned long*)0xDFF388 = (unsigned long)col_data;
+	    }
+	}
 }
 
 /***********************************************************************************************
@@ -694,39 +894,47 @@ SurfaceMonitorClass::SurfaceMonitorClass()
 /*
 ** VideoSurfaceDDraw
 */
-class VideoSurfaceSDL2;
-static VideoSurfaceSDL2* frontSurface = nullptr;
+class VideoSurfaceSDL;
+static VideoSurfaceSDL* frontSurface = nullptr;
 
-class VideoSurfaceSDL2 : public VideoSurface
+class VideoSurfaceSDL : public VideoSurface
 {
 public:
-    VideoSurfaceSDL2(int w, int h, GBC_Enum flags)
+    VideoSurfaceSDL(int w, int h, GBC_Enum flags)
         : flags(flags)
         , windowSurface(nullptr)
+#ifdef SDL2_BUILD
         , texture(nullptr)
+#endif
     {
         surface = SDL_CreateRGBSurface(0, w, h, 8, 0, 0, 0, 0);
-        SDL_SetSurfacePalette(surface, palette);
+        if (!Apollo_AMMXon)
+            SDL_SetSurfacePalette(surface, palette);
 
         if (flags & GBC_VISIBLE) {
+#ifdef SDL2_BUILD
             windowSurface = SDL_CreateRGBSurfaceWithFormat(0, w, h, SDL_BITSPERPIXEL(pixel_format), pixel_format);
             texture = SDL_CreateTexture(renderer, windowSurface->format->format, SDL_TEXTUREACCESS_STREAMING, w, h);
+#else
+            windowSurface = SDL_CreateRGBSurface(0, w, h, 16, 0, 0, 0, 0);
+#endif
             frontSurface = this;
         }
     }
 
-    virtual ~VideoSurfaceSDL2()
+    virtual ~VideoSurfaceSDL()
     {
         if (frontSurface == this) {
             frontSurface = nullptr;
         }
-
-        SDL_FreeSurface(surface);
-
+        if (surface) {
+            SDL_FreeSurface(surface);
+        }
+#ifdef SDL2_BUILD
         if (texture) {
             SDL_DestroyTexture(texture);
         }
-
+#endif
         if (windowSurface) {
             SDL_FreeSurface(windowSurface);
         }
@@ -756,32 +964,38 @@ public:
 
     virtual bool LockWait()
     {
-        return (SDL_LockSurface(surface) == 0);
+		//printf("LockWait()\n");
+        return true;//(SDL_LockSurface(surface) == 0);
     }
 
     virtual bool Unlock()
     {
-        SDL_UnlockSurface(surface);
+        //SDL_UnlockSurface(surface);
         return true;
     }
 
     virtual void Blt(const Rect& destRect, VideoSurface* src, const Rect& srcRect, bool mask)
     {
-        SDL_BlitSurface(((VideoSurfaceSDL2*)src)->surface, (SDL_Rect*)(&srcRect), surface, (SDL_Rect*)&destRect);
+		printf("Trying to blit\n");
+        //SDL_BlitSurface(((VideoSurfaceSDL*)src)->surface, (SDL_Rect*)(&srcRect), surface, (SDL_Rect*)&destRect);
     }
 
     virtual void FillRect(const Rect& rect, unsigned char color)
     {
-        SDL_FillRect(surface, (SDL_Rect*)(&rect), color);
+		printf("Trying to fill rect\n");
+        //SDL_FillRect(surface, (SDL_Rect*)(&rect), color);
     }
 
     void RenderSurface()
     {
         void* pixels;
         int pitch;
+        unsigned long col_data = 0;
 
-        SDL_BlitSurface(surface, NULL, windowSurface, NULL);
 
+		if (!Apollo_AMMXon)
+            SDL_BlitSurface(surface, NULL, windowSurface, NULL);
+#ifdef SDL2_BUILD
         if (Settings.Video.HardwareCursor) {
             /*
             ** Swap cursor before a frame is drawn. This reduces flickering when it's done only once per frame.
@@ -817,22 +1031,72 @@ public:
 
             SDL_BlitSurface(hwcursor.Surface, nullptr, windowSurface, &dst);
         }
-
+//#ifdef SDL2_BUILD
         SDL_UpdateTexture(texture, NULL, windowSurface->pixels, windowSurface->pitch);
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, &render_dst);
         SDL_RenderPresent(renderer);
-    }
+#else
+        SDL_ShowCursor(!Get_Mouse_State());
 
+        if (!Apollo_AMMXon)
+		{
+			SDL_BlitSurface(surface, NULL, window, NULL);
+            SDL_Flip(window);
+		}
+#ifdef AMIGA		
+        else  
+        {
+#if 1            
+           if (enable_triple == true)
+           {
+            switch (curr_buffer)
+                {
+                case 0:
+                    *(volatile ULONG*)SAGA_VIDEO_PLANEPTR = (ULONG) x_FBAddr1;
+                    surface->pixels = (ushort*)x_FBAddr2;
+                        break;
+                case 1:
+                    *(volatile ULONG*)SAGA_VIDEO_PLANEPTR = (ULONG) x_FBAddr2;
+                    surface->pixels = (ushort*)x_FBAddr3;
+                        break;
+                case 2:
+                    *(volatile ULONG*)SAGA_VIDEO_PLANEPTR = (ULONG) x_FBAddr3;
+                    surface->pixels = (ushort*)x_FBAddr1;
+                        break;
+                }
+
+                curr_buffer++;
+                if (curr_buffer > 2)
+                    curr_buffer = 0;
+            }        
+            else
+//#else
+            {
+                *(volatile ULONG*)SAGA_VIDEO_PLANEPTR = (ULONG) x_FBAddr0;//(ULONG) surface->pixels; 
+                surface->pixels = (ushort*)x_FBAddr0;
+            }
+#endif
+        }
+#endif
+
+
+#endif
+    }
 private:
     SDL_Surface* surface;
     SDL_Surface* windowSurface;
+#ifdef SDL2_BUILD
     SDL_Texture* texture;
+#endif
     GBC_Enum flags;
 };
 
+
+/* Enable FPS counter here */
+
 void Video_Render_Frame()
-{
+{  
     if (frontSurface) {
         frontSurface->RenderSurface();
     }
@@ -858,5 +1122,5 @@ Video& Video::Shared()
 
 VideoSurface* Video::CreateSurface(int w, int h, GBC_Enum flags)
 {
-    return new VideoSurfaceSDL2(w, h, flags);
+    return new VideoSurfaceSDL(w, h, flags);
 }

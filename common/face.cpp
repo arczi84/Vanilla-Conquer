@@ -10,7 +10,7 @@
 // GNU General Public License along with permitted additional restrictions
 // with this program. If not, see https://github.com/electronicarts/CnC_Remastered_Collection
 #include "face.h"
-
+#include <stdio.h>
 int Desired_Facing256(long x1, long y1, long x2, long y2)
 {
     signed char unk1 = 0;
